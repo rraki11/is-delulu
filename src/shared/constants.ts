@@ -81,6 +81,14 @@ export const DEFAULT_SHORTCUTS: AppShortcut[] = [
     isInstalledMock: true
   },
   {
+    id: 'calendar',
+    title: 'Calendar',
+    category: 'productivity',
+    icon: 'Calendar',
+    description: 'Open real-time interactive calendar',
+    target: 'calendar'
+  },
+  {
     id: 'browser',
     title: 'Web Browser',
     category: 'productivity',
@@ -91,6 +99,14 @@ export const DEFAULT_SHORTCUTS: AppShortcut[] = [
 ]
 
 export const DEFAULT_COMMANDS: CommandItem[] = [
+  {
+    id: 'cmd-open-calendar',
+    title: 'Open Interactive Calendar',
+    category: 'navigation',
+    icon: 'Calendar',
+    description: 'View month calendar, events, and schedules',
+    keywords: ['calendar', 'date', 'month', 'schedule', 'agenda', 'events']
+  },
   {
     id: 'cmd-top',
     title: 'Pin / Keep Always on Top',

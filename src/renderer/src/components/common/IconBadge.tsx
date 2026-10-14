@@ -17,6 +17,7 @@ import {
   Sparkles,
   RotateCcw,
   Layers,
+  Calendar,
   HelpCircle
 } from 'lucide-react'
 
@@ -37,7 +38,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Minimize2,
   Sparkles,
   RotateCcw,
-  Layers
+  Layers,
+  Calendar
 }
 
 interface IconBadgeProps {

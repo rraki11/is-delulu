@@ -1,6 +1,15 @@
 export type IslandMode = 'hidden' | 'collapsed' | 'expanded'
 
-export type ExpandedTab = 'launcher' | 'clipboard' | 'system' | 'media' | 'routines' | 'settings'
+export type ExpandedTab = 'launcher' | 'calendar' | 'clipboard' | 'system' | 'media' | 'routines' | 'settings'
+
+export interface CalendarEvent {
+  id: string
+  date: string // YYYY-MM-DD
+  title: string
+  time?: string // e.g. "14:30" or "02:30 PM"
+  completed?: boolean
+  createdAt: number
+}
 
 export type ClockFormat = '12h' | '24h'
 export type AppearanceMode = 'system' | 'light' | 'dark'

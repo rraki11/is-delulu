@@ -2,6 +2,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Search,
+  Calendar,
   Cpu,
   ClipboardList,
   Music,
@@ -11,6 +12,7 @@ import {
 import { IslandHeader } from './IslandHeader'
 import { CommandSearch } from '../launcher/CommandSearch'
 import { ShortcutGrid } from '../launcher/ShortcutGrid'
+import { CalendarWidget } from '../widgets/CalendarWidget'
 import { SystemWidget } from '../widgets/SystemWidget'
 import { ClipboardWidget } from '../widgets/ClipboardWidget'
 import { MediaWidget } from '../widgets/MediaWidget'
@@ -25,6 +27,7 @@ interface ExpandedPanelProps {
 
 const TABS: { id: ExpandedTab; label: string; icon: React.ElementType }[] = [
   { id: 'launcher', label: 'Launcher', icon: Search },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'system', label: 'System', icon: Cpu },
   { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
   { id: 'media', label: 'Media', icon: Music },
@@ -139,6 +142,8 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({ onCollapse }) => {
                 <ShortcutGrid onLaunch={handleExecuteAction} />
               </div>
             )}
+
+            {activeTab === 'calendar' && <CalendarWidget />}
 
             {activeTab === 'system' && <SystemWidget />}
 

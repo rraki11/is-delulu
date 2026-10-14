@@ -63,8 +63,26 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
         userSelect: 'none'
       }}
     >
-      {/* Dynamic Greeting & Live Clock */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* Dynamic Greeting & Live Clock - Click to open Calendar */}
+      <div
+        onClick={() => setActiveTab('calendar')}
+        title="Open Calendar"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: 'pointer',
+          padding: '2px 6px',
+          borderRadius: '8px',
+          transition: 'background 0.15s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent'
+        }}
+      >
         <span
           style={{
             fontSize: '13px',

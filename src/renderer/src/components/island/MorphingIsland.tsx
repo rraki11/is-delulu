@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import {
   ChevronDown,
   Search,
+  Calendar,
   Cpu,
   ClipboardList,
   Music,
@@ -12,6 +13,7 @@ import {
 import { IslandHeader } from './IslandHeader'
 import { CommandSearch } from '../launcher/CommandSearch'
 import { ShortcutGrid } from '../launcher/ShortcutGrid'
+import { CalendarWidget } from '../widgets/CalendarWidget'
 import { SystemWidget } from '../widgets/SystemWidget'
 import { ClipboardWidget } from '../widgets/ClipboardWidget'
 import { MediaWidget } from '../widgets/MediaWidget'
@@ -30,6 +32,7 @@ interface MorphingIslandProps {
 
 const TABS: { id: ExpandedTab; label: string; icon: React.ElementType }[] = [
   { id: 'launcher', label: 'Launcher', icon: Search },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'system', label: 'System', icon: Cpu },
   { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
   { id: 'media', label: 'Media', icon: Music },
@@ -65,6 +68,10 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   }, [preferences?.clockFormat])
 
   const handleExecuteAction = async (id: string, target?: string): Promise<void> => {
+    if (id === 'calendar' || id === 'cmd-open-calendar') {
+      setActiveTab('calendar')
+      return
+    }
     if (window.isDelulu) {
       if (id.startsWith('cmd-')) {
         const result = await window.isDelulu.runCommand(id)
@@ -102,7 +109,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
       initial={false}
       animate={{
         width: isExpanded ? 520 : 184,
-        height: isExpanded ? 520 : 32,
+        height: isExpanded ? 536 : 32,
         borderRadius: isExpanded ? '0px 0px 22px 22px' : '0px 0px 16px 16px',
         backgroundColor: isExpanded ? 'var(--bg-panel)' : 'var(--bg-pill)',
         borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -196,7 +203,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           transition={{ duration: 0.18, ease: 'easeOut' }}
           style={{
             width: '520px',
-            height: '520px',
+            height: '536px',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -281,6 +288,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
                   <ShortcutGrid onLaunch={handleExecuteAction} />
                 </div>
               )}
+              {activeTab === 'calendar' && <CalendarWidget />}
               {activeTab === 'system' && <SystemWidget />}
               {activeTab === 'clipboard' && <ClipboardWidget />}
               {activeTab === 'media' && <MediaWidget />}
