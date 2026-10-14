@@ -1,0 +1,324 @@
+import { BrowserWindow, screen, app } from 'electron'
+import { join } from 'path'
+import { WINDOW_CONFIG } from '../shared/constants'
+import { IslandMode } from '../shared/types'
+import { getPreferences, updatePreferences } from './services/preferences'
+
+let mainWindow: BrowserWindow | null = null
+let currentMode: IslandMode = 'collapsed'
+let activationTimer: NodeJS.Timeout | null = null
+let isHoverInWindowOrZone = false
+let forceVisibleDebug = process.argv.includes('--force-visible') || process.env.DEBUG_ISLAND === '1'
+
+export function getMainWindow(): BrowserWindow | null {
+  return mainWindow
+}
+
+export function getCurrentIslandMode(): IslandMode {
+  return currentMode
+}
+
+export function isForceVisibleActive(): boolean {
+  return forceVisibleDebug
+}
+
+export function toggleForceVisibleDebug(): boolean {
+  forceVisibleDebug = !forceVisibleDebug
+  console.log(`[is-delulu:debug] Force-Visible mode toggled: ${forceVisibleDebug ? 'ENABLED' : 'DISABLED'}`)
+  if (forceVisibleDebug) {
+    showIslandWindow('collapsed')
+  } else {
+    // Return to normal preference-based behavior
+    const prefs = getPreferences()
+    if (!prefs.isPinned) {
+      hideIslandWindow()
+    }
+  }
+  return forceVisibleDebug
+}
+
+export function createMainWindow(): BrowserWindow {
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { x: workX, y: workY, width: workW, height: workH } = primaryDisplay.workArea
+
+  console.log('[is-delulu:display] Primary Display:', {
+    bounds: primaryDisplay.bounds,
+    workArea: primaryDisplay.workArea,
+    scaleFactor: primaryDisplay.scaleFactor
+  })
+
+  const initialWidth = WINDOW_CONFIG.width
+  const initialHeight = WINDOW_CONFIG.height
+  const initialX = Math.round(workX + (workW - initialWidth) / 2)
+  const initialY = workY + WINDOW_CONFIG.topOffset
+
+  console.log('[is-delulu:window] Initial window bounds:', {
+    x: initialX,
+    y: initialY,
+    width: initialWidth,
+    height: initialHeight
+  })
+
+  mainWindow = new BrowserWindow({
+    width: initialWidth,
+    height: initialHeight,
+    x: initialX,
+    y: initialY,
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    resizable: false,
+    thickFrame: false,
+    type: 'toolbar',
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  })
+
+  // Set window floating level above standard desktop windows
+  mainWindow.setAlwaysOnTop(true, 'screen-saver')
+
+  mainWindow.on('ready-to-show', () => {
+    console.log('[is-delulu:window] ready-to-show event fired')
+    const prefs = getPreferences()
+    if (prefs.isPinned || forceVisibleDebug) {
+      currentMode = 'collapsed'
+      enforceCenteredPosition('collapsed')
+      mainWindow?.showInactive()
+      mainWindow?.setIgnoreMouseEvents(true, { forward: true })
+      console.log('[is-delulu:window] Showing window on startup (pinned or debug)')
+    } else {
+      // Start in hidden state until user reaches the actual top-center edge
+      currentMode = 'hidden'
+      enforceCenteredPosition('hidden')
+      mainWindow?.hide()
+      console.log('[is-delulu:window] Window initialized in hidden state on startup')
+    }
+  })
+
+  mainWindow.on('show', () => {
+    console.log('[is-delulu:window] Native window SHOW event. Bounds:', mainWindow?.getBounds())
+  })
+
+  mainWindow.on('hide', () => {
+    console.log('[is-delulu:window] Native window HIDE event')
+  })
+
+  // Prevent opening new native windows directly
+  mainWindow.webContents.setWindowOpenHandler(() => {
+    return { action: 'deny' }
+  })
+
+  // Startup and runtime diagnostics
+  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    const levelTag = level === 3 ? 'ERROR' : level === 2 ? 'WARN' : 'INFO'
+    console.log(`[Renderer ${levelTag}] ${message} (${sourceId}:${line})`)
+  })
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error(
+      `[Renderer Load Error] Failed to load ${validatedURL}: [${errorCode}] ${errorDescription}`
+    )
+  })
+
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error(`[Renderer Crash] Render process exited: ${details.reason} (code: ${details.exitCode})`)
+  })
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[is-delulu:window] Renderer web contents loaded successfully')
+  })
+
+  // Re-center window when screen resolution or DPI scaling changes
+  screen.on('display-metrics-changed', () => {
+    console.log('[is-delulu:display] Display metrics changed, re-centering window')
+    enforceCenteredPosition(currentMode)
+  })
+
+  // Load renderer
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    console.log('[is-delulu:window] Loading Vite development server:', process.env['ELECTRON_RENDERER_URL'])
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  } else {
+    const targetFile = join(__dirname, '../renderer/index.html')
+    console.log('[is-delulu:window] Loading production bundle:', targetFile)
+    mainWindow.loadFile(targetFile)
+  }
+
+  // Start background hover activation zone monitor
+  startActivationMonitor()
+
+  return mainWindow
+}
+
+export function enforceCenteredPosition(_mode: IslandMode = currentMode): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { x: workX, y: workY, width: workW } = primaryDisplay.workArea
+
+  const targetWidth = WINDOW_CONFIG.width
+  const targetHeight = WINDOW_CONFIG.height
+  const targetX = Math.round(workX + (workW - targetWidth) / 2)
+  const targetY = workY + WINDOW_CONFIG.topOffset
+
+  const currentBounds = mainWindow.getBounds()
+  if (
+    currentBounds.x !== targetX ||
+    currentBounds.y !== targetY ||
+    currentBounds.width !== targetWidth ||
+    currentBounds.height !== targetHeight
+  ) {
+    mainWindow.setBounds(
+      {
+        x: targetX,
+        y: targetY,
+        width: targetWidth,
+        height: targetHeight
+      },
+      false
+    )
+  }
+}
+
+export const resetIslandPosition = enforceCenteredPosition
+
+export function setIslandWindowMode(mode: IslandMode): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  currentMode = mode
+
+  console.log(`[is-delulu:window] Mode set to '${mode}'. Current visible: ${mainWindow.isVisible()}`)
+
+  if (mode === 'hidden') {
+    if (!forceVisibleDebug) {
+      mainWindow.hide()
+    }
+    return
+  }
+
+  enforceCenteredPosition(mode)
+
+  if (!mainWindow.isVisible()) {
+    mainWindow.showInactive()
+    mainWindow.setIgnoreMouseEvents(true, { forward: true })
+  }
+}
+
+export function showIslandWindow(targetMode: IslandMode = 'collapsed'): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  currentMode = targetMode
+  enforceCenteredPosition(targetMode)
+  if (!mainWindow.isVisible()) {
+    mainWindow.showInactive()
+    mainWindow.setIgnoreMouseEvents(true, { forward: true })
+  }
+  mainWindow.webContents.send('island:mode-changed', targetMode)
+  mainWindow.webContents.send('island:reveal')
+  console.log(`[is-delulu:window] showIslandWindow executed for mode: ${targetMode}`)
+}
+
+export function hideIslandWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (forceVisibleDebug) return
+  const prefs = getPreferences()
+  if (prefs.isPinned) return // Respect pinned state
+
+  currentMode = 'hidden'
+  mainWindow.hide()
+  mainWindow.webContents.send('island:mode-changed', 'hidden')
+  console.log('[is-delulu:window] hideIslandWindow executed')
+}
+
+/**
+ * Monitors cursor position on the primary monitor.
+ * Detects pointer strictly at the actual top-center edge (minimal practical height 2-3px).
+ * When the pointer reaches the actual top edge near center while hidden, it reveals the pill.
+ * Once visible, it tracks whether the pointer remains over the active island surface.
+ */
+export function startActivationMonitor(): void {
+  if (activationTimer) clearInterval(activationTimer)
+
+  activationTimer = setInterval(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
+    const prefs = getPreferences()
+    if (prefs.isPinned || forceVisibleDebug) {
+      // Pinned/Debug: keep visible
+      if (!mainWindow.isVisible()) {
+        mainWindow.showInactive()
+        mainWindow.setIgnoreMouseEvents(true, { forward: true })
+      }
+      return
+    }
+
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const { x: workX, y: workY, width: workW } = primaryDisplay.workArea
+    const centerX = workX + workW / 2
+    const pt = screen.getCursorScreenPoint()
+
+    // 1. Narrow top-edge activation zone:
+    // Physical monitor top ceiling: pt.y >= workY && pt.y <= workY + 2 (only top 2-3 pixels)
+    // Horizontally centered matching the collapsed pill width (184px -> +/- 92px)
+    // This strictly prevents triggering during normal mouse movement over Brave browser tabs.
+    const inTopEdgeActivationZone =
+      pt.y >= workY &&
+      pt.y <= workY + 2 &&
+      Math.abs(pt.x - centerX) <= 92
+
+    if (inTopEdgeActivationZone) {
+      if (!mainWindow.isVisible() || currentMode === 'hidden') {
+        console.log(`[is-delulu:hover] Pointer touched top-center edge at (${pt.x}, ${pt.y}). Revealing pill!`)
+        currentMode = 'collapsed'
+        enforceCenteredPosition('collapsed')
+        mainWindow.showInactive()
+        mainWindow.setIgnoreMouseEvents(true, { forward: true })
+        mainWindow.webContents.send('island:mode-changed', 'collapsed')
+        mainWindow.webContents.send('island:reveal')
+        mainWindow.webContents.send('island:hover-state', true)
+        isHoverInWindowOrZone = true
+      }
+      return
+    }
+
+    // 2. Active surface hit-testing when window is visible
+    if (mainWindow.isVisible() && currentMode !== 'hidden') {
+      const surfaceWidth =
+        currentMode === 'expanded' ? WINDOW_CONFIG.panel.width : WINDOW_CONFIG.pill.width
+      const surfaceHeight =
+        currentMode === 'expanded' ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height
+      const surfaceLeft = centerX - surfaceWidth / 2
+      const surfaceRight = centerX + surfaceWidth / 2
+      const surfaceTop = workY
+      const surfaceBottom = workY + surfaceHeight
+
+      const inSurface =
+        pt.x >= surfaceLeft &&
+        pt.x <= surfaceRight &&
+        pt.y >= surfaceTop &&
+        pt.y <= surfaceBottom
+
+      if (inSurface !== isHoverInWindowOrZone) {
+        isHoverInWindowOrZone = inSurface
+        console.log(`[is-delulu:hover] Island hover state changed: ${inSurface} at (${pt.x}, ${pt.y})`)
+        mainWindow.webContents.send('island:hover-state', inSurface)
+      }
+    } else {
+      isHoverInWindowOrZone = false
+    }
+  }, 60)
+}
+
+export function stopActivationMonitor(): void {
+  if (activationTimer) {
+    clearInterval(activationTimer)
+    activationTimer = null
+  }
+}

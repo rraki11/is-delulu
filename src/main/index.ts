@@ -1,0 +1,327 @@
+import { app, BrowserWindow, ipcMain, globalShortcut, screen } from 'electron'
+import {
+  createMainWindow,
+  getMainWindow,
+  getCurrentIslandMode,
+  setIslandWindowMode,
+  enforceCenteredPosition,
+  stopActivationMonitor,
+  toggleForceVisibleDebug,
+  isForceVisibleActive
+} from './window'
+import { setupTray } from './tray'
+import { getSystemStats } from './services/system'
+import {
+  startClipboardMonitor,
+  stopClipboardMonitor,
+  getClipboardHistory,
+  copyText,
+  clearClipboard,
+  onClipboardChange
+} from './services/clipboard'
+import { launchTarget } from './services/launcher'
+import {
+  getMediaState,
+  controlMedia,
+  startMediaMonitor,
+  stopMediaMonitor,
+  onMediaChange
+} from './services/media'
+import { getRoutines, toggleRoutine } from './services/routines'
+import {
+  initPreferences,
+  getPreferences,
+  updatePreferences,
+  getResolvedTheme,
+  onPreferencesChange,
+  onThemeChange
+} from './services/preferences'
+import { IslandMode, UserPreferences, MediaControlAction } from '../shared/types'
+
+app.setName('is-delulu')
+
+// Enforce single instance lock
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const win = getMainWindow()
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.show()
+      win.focus()
+    }
+  })
+
+  // NOTE: Do NOT call app.disableHardwareAcceleration().
+  // Disabling hardware acceleration on Windows disables DirectComposition alpha blending,
+  // which causes transparent windows to render with a solid default gray background brush.
+  app.commandLine.appendSwitch('disable-renderer-backgrounding')
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+
+  // App lifecycle
+  app.whenReady().then(() => {
+    // Initialize persistent user preferences
+    initPreferences()
+
+  const mainWindow = createMainWindow()
+
+  try {
+    setupTray()
+  } catch (trayErr) {
+    console.warn('[is-delulu] Tray icon setup deferred:', trayErr)
+  }
+
+  startClipboardMonitor()
+  startMediaMonitor()
+
+  // Register global hotkey to toggle / summon island
+  globalShortcut.register('CommandOrControl+Shift+Space', () => {
+    const current = getCurrentIslandMode()
+    const next: IslandMode = current === 'expanded' ? 'collapsed' : 'expanded'
+    setIslandWindowMode(next)
+    mainWindow.webContents.send('island:mode-changed', next)
+    mainWindow.show()
+    mainWindow.focus()
+  })
+
+  // Register development debug hotkey to force island visible
+  globalShortcut.register('CommandOrControl+Shift+D', () => {
+    const isForced = toggleForceVisibleDebug()
+    mainWindow.webContents.send('debug:force-visible-changed', isForced)
+  })
+
+  // Stream clipboard changes to renderer
+  onClipboardChange((items) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('clipboard:update', items)
+    }
+  })
+
+  // Stream real GSMTC media changes to renderer
+  onMediaChange((media) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('media:update', media)
+    }
+  })
+
+  // Stream preference changes to renderer
+  onPreferencesChange((prefs) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('preferences:changed', prefs)
+    }
+  })
+
+  // Stream theme changes to renderer
+  onThemeChange((theme) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('theme:changed', theme)
+    }
+  })
+
+  // Stream periodic system metrics
+  const sysTimer = setInterval(() => {
+    if (!mainWindow.isDestroyed()) {
+      const stats = getSystemStats()
+      mainWindow.webContents.send('system:update', stats)
+    }
+  }, 2500)
+
+  app.on('before-quit', () => {
+    clearInterval(sysTimer)
+    stopActivationMonitor()
+    stopClipboardMonitor()
+    stopMediaMonitor()
+    globalShortcut.unregisterAll()
+  })
+
+  // IPC Handlers - Window & Island Mode
+  ipcMain.handle('island:set-mode', (_event, mode: IslandMode) => {
+    setIslandWindowMode(mode)
+  })
+
+  ipcMain.handle('island:get-mode', () => {
+    return getCurrentIslandMode()
+  })
+
+  ipcMain.handle('island:reset-position', () => {
+    enforceCenteredPosition()
+  })
+
+  ipcMain.handle('island:minimize', () => {
+    setIslandWindowMode('collapsed')
+    mainWindow.webContents.send('island:mode-changed', 'collapsed')
+  })
+
+  ipcMain.handle('island:close', () => {
+    const prefs = getPreferences()
+    if (prefs.isPinned) {
+      setIslandWindowMode('collapsed')
+      mainWindow.webContents.send('island:mode-changed', 'collapsed')
+    } else {
+      setIslandWindowMode('hidden')
+      mainWindow.webContents.send('island:mode-changed', 'hidden')
+    }
+  })
+
+  ipcMain.handle('island:is-always-on-top', () => {
+    return mainWindow.isAlwaysOnTop()
+  })
+
+  ipcMain.handle('island:set-always-on-top', (_event, enabled: boolean) => {
+    mainWindow.setAlwaysOnTop(Boolean(enabled), 'screen-saver')
+    updatePreferences({ isPinned: Boolean(enabled) })
+  })
+
+  // Set click-through for transparent window regions
+  ipcMain.handle('window:set-ignore-mouse-events', (_event, ignore: boolean, forward = true) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setIgnoreMouseEvents(Boolean(ignore), { forward: Boolean(forward) })
+    }
+  })
+
+  // Auto-collapse when clicking outside into another app (unless pinned)
+  mainWindow.on('blur', () => {
+    const prefs = getPreferences()
+    if (!prefs.isPinned && getCurrentIslandMode() === 'expanded') {
+      mainWindow.webContents.send('island:mode-changed', 'collapsed')
+    }
+  })
+
+  // Preferences IPC Handlers
+  ipcMain.handle('preferences:get', () => {
+    return getPreferences()
+  })
+
+  ipcMain.handle('preferences:update', (_event, partial: Partial<UserPreferences>) => {
+    const updated = updatePreferences(partial)
+    if (partial.isPinned !== undefined) {
+      mainWindow.setAlwaysOnTop(Boolean(partial.isPinned), 'screen-saver')
+    }
+    return updated
+  })
+
+  ipcMain.handle('theme:get-resolved', () => {
+    return getResolvedTheme()
+  })
+
+  // System stats
+  ipcMain.handle('system:get-stats', () => {
+    return getSystemStats()
+  })
+
+  // Clipboard operations
+  ipcMain.handle('clipboard:get-history', () => {
+    return getClipboardHistory()
+  })
+
+  ipcMain.handle('clipboard:copy', (_event, text: string) => {
+    if (typeof text !== 'string') return false
+    return copyText(text)
+  })
+
+  ipcMain.handle('clipboard:clear', () => {
+    return clearClipboard()
+  })
+
+  // Launcher actions
+  ipcMain.handle('launcher:open-target', async (_event, target: string) => {
+    if (typeof target !== 'string') {
+      return { success: false, message: 'Invalid target parameter' }
+    }
+    return launchTarget(target)
+  })
+
+  ipcMain.handle('launcher:run-command', async (_event, commandId: string) => {
+    switch (commandId) {
+      case 'cmd-top': {
+        const prefs = getPreferences()
+        const next = !prefs.isPinned
+        updatePreferences({ isPinned: next })
+        return { success: true, message: `Pinned on top: ${next ? 'Enabled' : 'Disabled'}` }
+      }
+      case 'cmd-clear-clip': {
+        clearClipboard()
+        return { success: true, message: 'Clipboard cleared' }
+      }
+      case 'cmd-open-downloads': {
+        return launchTarget('downloads')
+      }
+      case 'cmd-open-calc': {
+        return launchTarget('calc.exe')
+      }
+      case 'cmd-open-taskmgr': {
+        return launchTarget('taskmgr.exe')
+      }
+      case 'cmd-copy-sysinfo': {
+        const stats = getSystemStats()
+        const summary = `is-delulu Telemetry:\nOS: ${stats.platform} (${stats.arch})\nCPU: ${stats.cpuModel} (${stats.cpuUsage}%)\nMemory: ${stats.memoryUsedGb} GB / ${stats.memoryTotalGb} GB (${stats.memoryPercent}%)\nUptime: ${stats.uptimeFormatted}`
+        copyText(summary)
+        return { success: true, message: 'System summary copied to clipboard' }
+      }
+      case 'cmd-collapse': {
+        setIslandWindowMode('collapsed')
+        mainWindow.webContents.send('island:mode-changed', 'collapsed')
+        return { success: true, message: 'Island collapsed' }
+      }
+      default:
+        return { success: false, message: `Unknown command: ${commandId}` }
+    }
+  })
+
+  // Media
+  ipcMain.handle('media:get-state', () => {
+    return getMediaState()
+  })
+
+  ipcMain.handle(
+    'media:control',
+    (
+      _event,
+      action: MediaControlAction,
+      value?: number | boolean,
+      sessionId?: string,
+      processId?: number
+    ) => {
+      return controlMedia(action, value, sessionId, processId)
+    }
+  )
+
+  // Routines
+  ipcMain.handle('routines:get', () => {
+    return getRoutines()
+  })
+
+  ipcMain.handle('routines:toggle', (_event, routineId: string) => {
+    return toggleRoutine(routineId)
+  })
+
+  // Development diagnostics
+  ipcMain.handle('debug:toggle-force-visible', () => {
+    return toggleForceVisibleDebug()
+  })
+
+  ipcMain.handle('debug:get-status', () => {
+    return {
+      forceVisible: isForceVisibleActive(),
+      mode: getCurrentIslandMode(),
+      bounds: mainWindow.getBounds(),
+      cursor: screen.getCursorScreenPoint()
+    }
+  })
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'win32') {
+    app.quit()
+  }
+})
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow()
+    }
+  })
+}
+
