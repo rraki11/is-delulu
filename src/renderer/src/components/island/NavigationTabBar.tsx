@@ -50,7 +50,7 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
     const activeBtn = el.querySelector(`button[data-tab="${tabId}"]`) as HTMLElement | null
     if (!activeBtn) return
 
-    const MARGIN = 12
+    const MARGIN = 8
     const targetLeft  = activeBtn.offsetLeft - MARGIN
     const targetRight = activeBtn.offsetLeft + activeBtn.offsetWidth + MARGIN
 
@@ -63,10 +63,7 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
       try {
         el.scrollTo({ left: dest, behavior })
         setTimeout(() => {
-          if (el && Math.abs(el.scrollLeft - dest) > 2) {
-            el.scrollLeft = dest
-            updateScrollStatus()
-          }
+          if (el && Math.abs(el.scrollLeft - dest) > 2) { el.scrollLeft = dest; updateScrollStatus() }
         }, 350)
       } catch { el.scrollLeft = dest }
     } else if (targetRight > el.scrollLeft + el.clientWidth) {
@@ -74,10 +71,7 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
       try {
         el.scrollTo({ left: dest, behavior })
         setTimeout(() => {
-          if (el && Math.abs(el.scrollLeft - dest) > 2) {
-            el.scrollLeft = dest
-            updateScrollStatus()
-          }
+          if (el && Math.abs(el.scrollLeft - dest) > 2) { el.scrollLeft = dest; updateScrollStatus() }
         }, 350)
       } catch { el.scrollLeft = dest }
     }
@@ -93,7 +87,6 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-
     const handleWheel = (e: WheelEvent): void => {
       if (el.scrollWidth <= el.clientWidth) return
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && e.deltaY !== 0) {
@@ -104,12 +97,10 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
         requestAnimationFrame(updateScrollStatus)
       }
     }
-
     el.addEventListener('wheel', handleWheel, { passive: false })
     el.addEventListener('scroll', updateScrollStatus, { passive: true })
     window.addEventListener('resize', updateScrollStatus)
     updateScrollStatus()
-
     return () => {
       el.removeEventListener('wheel', handleWheel)
       el.removeEventListener('scroll', updateScrollStatus)
@@ -121,30 +112,23 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     const cur = TABS.findIndex((t) => t.id === activeTab)
     if (cur === -1) return
-
     const jump = (idx: number): void => {
       const tab = TABS[idx].id
       setActiveTab(tab);
       (containerRef.current?.querySelector(`button[data-tab="${tab}"]`) as HTMLElement | null)?.focus()
     }
-
     if      (e.key === 'ArrowRight') { e.preventDefault(); jump((cur + 1) % TABS.length) }
     else if (e.key === 'ArrowLeft')  { e.preventDefault(); jump((cur - 1 + TABS.length) % TABS.length) }
     else if (e.key === 'Home')       { e.preventDefault(); jump(0) }
     else if (e.key === 'End')        { e.preventDefault(); jump(TABS.length - 1) }
   }
 
-  // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="nav-seg-wrap">
       {/* Left scroll fade */}
-      {canScrollLeft && (
-        <div data-testid="nav-fade-left"  className="nav-seg-fade nav-seg-fade--left"  />
-      )}
+      {canScrollLeft  && <div data-testid="nav-fade-left"  className="nav-seg-fade nav-seg-fade--left"  />}
       {/* Right scroll fade */}
-      {canScrollRight && (
-        <div data-testid="nav-fade-right" className="nav-seg-fade nav-seg-fade--right" />
-      )}
+      {canScrollRight && <div data-testid="nav-fade-right" className="nav-seg-fade nav-seg-fade--right" />}
 
       {/* Recessed outer track */}
       <div
@@ -166,24 +150,24 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
               role="tab"
               aria-selected={isActive}
               aria-label={tab.label}
+              title={tab.label}
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               className={`nav-seg-item nav-tab-button${isActive ? ' nav-seg-item--active' : ''}`}
             >
-              {/* Sliding raised pill — rendered behind content via layoutId */}
+              {/* Sliding raised pill */}
               {isActive && (
                 <motion.span
                   layoutId="nav-active-pill"
                   className="nav-seg-pill"
-                  transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.7 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 32, mass: 0.65 }}
                   aria-hidden="true"
                 />
               )}
 
-              {/* Icon + label sit above the pill via relative z-index */}
-              <span className="nav-seg-content">
-                <Icon size={13} className="nav-seg-icon" />
-                <span className="nav-seg-label">{tab.label}</span>
+              {/* Icon — sits above pill via z-index */}
+              <span className="nav-seg-content" aria-hidden="true">
+                <Icon size={15} strokeWidth={isActive ? 2 : 1.6} className="nav-seg-icon" />
               </span>
             </button>
           )

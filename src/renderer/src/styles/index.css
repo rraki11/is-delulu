@@ -307,35 +307,34 @@ html, body {
 }
 
 /* =====================================================================
- * Neumorphic Segmented Navigation
+ * Neumorphic Segmented Navigation — Icon Only
  * Recessed outer track + raised animated pill indicator.
+ * Seven icons spread evenly via flex:1; no visible labels.
  * Colors 100% from design-token CSS vars — adapts to dark / light.
  * ===================================================================== */
 
-/* Outer wrapper: clips fades, provides stacking context */
+/* Outer wrapper */
 .nav-seg-wrap {
   position: relative;
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 10px;
   flex-shrink: 0;
   box-sizing: border-box;
 }
 
-/* Recessed scrollable track */
+/* Recessed track — fills full width, children spread evenly */
 .nav-seg-track {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0;
   padding: 3px;
-  border-radius: 14px;
+  border-radius: 13px;
   background: var(--nav-track-bg);
   box-shadow: var(--nav-track-shadow);
   overflow-x: auto;
   overflow-y: hidden;
-  white-space: nowrap;
   width: 100%;
   box-sizing: border-box;
-  /* hide scrollbar */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -346,58 +345,54 @@ html, body {
   height: 0;
 }
 
-/* Individual tab item — position:relative so the pill can be absolute inside it */
+/* Each icon item — flex:1 so all seven fill the track evenly */
 .nav-seg-item {
   position: relative;
+  flex: 1;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 10px;
-  border-radius: 11px;
+  /* square-ish hit area */
+  height: 30px;
+  min-width: 36px;
+  border-radius: 10px;
   border: none;
   background: transparent;
   color: var(--nav-item-inactive-color);
-  font-family: var(--font-text);
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
   cursor: pointer;
-  white-space: nowrap;
   user-select: none;
-  transition: color 180ms ease;
+  transition: color 160ms ease, opacity 160ms ease;
   outline: none;
 }
 
 .nav-seg-item:hover {
   color: var(--nav-item-active-color);
-  opacity: 0.8;
+  opacity: 0.75;
 }
 
 .nav-seg-item--active {
   color: var(--nav-item-active-color);
-  font-weight: 500;
 }
 
-/* The raised animated pill — rendered via motion.span with layoutId */
+/* Raised animated pill */
 .nav-seg-pill {
   position: absolute;
   inset: 0;
-  border-radius: 11px;
+  border-radius: 10px;
   background: var(--nav-pill-bg);
   box-shadow: var(--nav-pill-shadow);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Icon + label stacked above pill */
+/* Icon wrapper above pill */
 .nav-seg-content {
   position: relative;
   z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
   pointer-events: none;
 }
 
@@ -405,16 +400,12 @@ html, body {
   flex-shrink: 0;
 }
 
-.nav-seg-label {
-  line-height: 14px;
-}
-
-/* Scroll edge fades */
+/* Scroll edge fades (shown only when overflow actually occurs) */
 .nav-seg-fade {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
-  width: 32px;
+  top: 7px;
+  bottom: 7px;
+  width: 28px;
   pointer-events: none;
   z-index: 5;
 }
@@ -422,22 +413,22 @@ html, body {
 .nav-seg-fade--left {
   left: 10px;
   background: linear-gradient(to right, var(--bg-panel) 20%, transparent);
-  border-radius: 14px 0 0 14px;
+  border-radius: 13px 0 0 13px;
 }
 
 .nav-seg-fade--right {
   right: 10px;
   background: linear-gradient(to left, var(--bg-panel) 20%, transparent);
-  border-radius: 0 14px 14px 0;
+  border-radius: 0 13px 13px 0;
 }
 
-/* Keyboard focus ring — visible on the item, not the pill */
+/* Keyboard focus ring */
 .nav-seg-item:focus-visible {
   outline: 1.5px solid var(--accent) !important;
   outline-offset: 1px !important;
 }
 
-/* legacy alias so existing selectors still work */
+/* Legacy aliases */
 .nav-tab-bar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -463,6 +454,7 @@ html, body {
 .pulse-animation {
   animation: pulseGlow 2.4s ease-in-out infinite;
 }
+
 
 
 /* =====================================================================
