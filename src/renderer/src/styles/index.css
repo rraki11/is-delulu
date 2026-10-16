@@ -306,7 +306,138 @@ html, body {
   background: var(--accent-muted);
 }
 
-/* Navigation Tab Bar Scrollbar & Focus */
+/* =====================================================================
+ * Neumorphic Segmented Navigation
+ * Recessed outer track + raised animated pill indicator.
+ * Colors 100% from design-token CSS vars — adapts to dark / light.
+ * ===================================================================== */
+
+/* Outer wrapper: clips fades, provides stacking context */
+.nav-seg-wrap {
+  position: relative;
+  width: 100%;
+  padding: 8px 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* Recessed scrollable track */
+.nav-seg-track {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--nav-track-bg);
+  box-shadow: var(--nav-track-shadow);
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  width: 100%;
+  box-sizing: border-box;
+  /* hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav-seg-track::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Individual tab item — position:relative so the pill can be absolute inside it */
+.nav-seg-item {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 11px;
+  border: none;
+  background: transparent;
+  color: var(--nav-item-inactive-color);
+  font-family: var(--font-text);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: color 180ms ease;
+  outline: none;
+}
+
+.nav-seg-item:hover {
+  color: var(--nav-item-active-color);
+  opacity: 0.8;
+}
+
+.nav-seg-item--active {
+  color: var(--nav-item-active-color);
+  font-weight: 500;
+}
+
+/* The raised animated pill — rendered via motion.span with layoutId */
+.nav-seg-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: var(--nav-pill-bg);
+  box-shadow: var(--nav-pill-shadow);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Icon + label stacked above pill */
+.nav-seg-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.nav-seg-icon {
+  flex-shrink: 0;
+}
+
+.nav-seg-label {
+  line-height: 14px;
+}
+
+/* Scroll edge fades */
+.nav-seg-fade {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 32px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.nav-seg-fade--left {
+  left: 10px;
+  background: linear-gradient(to right, var(--bg-panel) 20%, transparent);
+  border-radius: 14px 0 0 14px;
+}
+
+.nav-seg-fade--right {
+  right: 10px;
+  background: linear-gradient(to left, var(--bg-panel) 20%, transparent);
+  border-radius: 0 14px 14px 0;
+}
+
+/* Keyboard focus ring — visible on the item, not the pill */
+.nav-seg-item:focus-visible {
+  outline: 1.5px solid var(--accent) !important;
+  outline-offset: 1px !important;
+}
+
+/* legacy alias so existing selectors still work */
 .nav-tab-bar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -325,19 +456,14 @@ html, body {
 
 /* Pulse animation */
 @keyframes pulseGlow {
-  0%, 100% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
+  0%, 100% { opacity: 0.6; transform: scale(1);   }
+  50%       { opacity: 1;   transform: scale(1.1); }
 }
 
 .pulse-animation {
   animation: pulseGlow 2.4s ease-in-out infinite;
 }
+
 
 /* =====================================================================
  * Wallpaper-Adaptive Gradient Glow System

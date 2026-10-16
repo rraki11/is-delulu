@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
+import { motion } from 'motion/react'
 import {
   Search,
   Calendar,
@@ -11,13 +12,13 @@ import {
 import { ExpandedTab } from '../../shared'
 
 export const TABS: { id: ExpandedTab; label: string; icon: React.ElementType }[] = [
-  { id: 'launcher', label: 'Launcher', icon: Search },
-  { id: 'calendar', label: 'Calendar', icon: Calendar },
-  { id: 'system', label: 'System', icon: Cpu },
+  { id: 'launcher',  label: 'Launcher',  icon: Search },
+  { id: 'calendar',  label: 'Calendar',  icon: Calendar },
+  { id: 'system',    label: 'System',    icon: Cpu },
   { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
-  { id: 'media', label: 'Media', icon: Music },
-  { id: 'routines', label: 'Routines', icon: Sparkles },
-  { id: 'settings', label: 'Settings', icon: Settings }
+  { id: 'media',     label: 'Media',     icon: Music },
+  { id: 'routines',  label: 'Routines',  icon: Sparkles },
+  { id: 'settings',  label: 'Settings',  icon: Settings }
 ]
 
 interface NavigationTabBarProps {
@@ -30,10 +31,10 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
   setActiveTab
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollLeft,  setCanScrollLeft]  = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
 
-  // Check scroll position to display subtle fade edge cues
+  // ── Scroll status ──────────────────────────────────────────────────
   const updateScrollStatus = useCallback(() => {
     const el = containerRef.current
     if (!el) return
@@ -42,7 +43,7 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
     setCanScrollRight(maxScroll > 2 && el.scrollLeft < maxScroll - 2)
   }, [])
 
-  // Keep selected tab in view with comfortable margin
+  // ── Scroll active tab into view ────────────────────────────────────
   const scrollTabIntoView = useCallback((tabId: ExpandedTab, smooth = true) => {
     const el = containerRef.current
     if (!el) return
@@ -50,68 +51,56 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
     if (!activeBtn) return
 
     const MARGIN = 12
-    const targetLeft = activeBtn.offsetLeft - MARGIN
+    const targetLeft  = activeBtn.offsetLeft - MARGIN
     const targetRight = activeBtn.offsetLeft + activeBtn.offsetWidth + MARGIN
 
-    const isReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const isVisible = typeof document !== 'undefined' && !document.hidden
+    const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const isVisible = !document.hidden
     const behavior: ScrollBehavior = smooth && isVisible && !isReducedMotion ? 'smooth' : 'auto'
 
     if (targetLeft < el.scrollLeft) {
       const dest = Math.max(0, targetLeft)
       try {
-        el.scrollTo({ left: dest, behavior: smooth ? 'smooth' : 'auto' })
+        el.scrollTo({ left: dest, behavior })
         setTimeout(() => {
           if (el && Math.abs(el.scrollLeft - dest) > 2) {
             el.scrollLeft = dest
             updateScrollStatus()
           }
         }, 350)
-      } catch {
-        el.scrollLeft = dest
-      }
+      } catch { el.scrollLeft = dest }
     } else if (targetRight > el.scrollLeft + el.clientWidth) {
       const dest = Math.min(el.scrollWidth - el.clientWidth, targetRight - el.clientWidth)
       try {
-        el.scrollTo({ left: dest, behavior: smooth ? 'smooth' : 'auto' })
+        el.scrollTo({ left: dest, behavior })
         setTimeout(() => {
           if (el && Math.abs(el.scrollLeft - dest) > 2) {
             el.scrollLeft = dest
             updateScrollStatus()
           }
         }, 350)
-      } catch {
-        el.scrollLeft = dest
-      }
+      } catch { el.scrollLeft = dest }
     }
     updateScrollStatus()
   }, [updateScrollStatus])
 
-  // Scroll active tab into view when activeTab prop changes
   useEffect(() => {
     scrollTabIntoView(activeTab, true)
     updateScrollStatus()
   }, [activeTab, scrollTabIntoView, updateScrollStatus])
 
-  // Trackpad & Wheel horizontal navigation listener
+  // ── Trackpad / wheel horizontal scroll ────────────────────────────
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
     const handleWheel = (e: WheelEvent): void => {
-      // If content does not overflow, let default events pass through
       if (el.scrollWidth <= el.clientWidth) return
-
-      // Two-finger horizontal trackpad gestures produce dominant deltaX.
-      // Vertical wheel or two-finger vertical trackpad gestures over the tab bar produce dominant deltaY.
-      // We translate deltaY to horizontal scroll over the navigation bar, without hijacking elsewhere.
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && e.deltaY !== 0) {
         e.preventDefault()
-        const delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY
-        el.scrollLeft += delta
+        el.scrollLeft += e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY
         updateScrollStatus()
       } else if (Math.abs(e.deltaX) > 0) {
-        // Native horizontal trackpad scrolling handles deltaX, but trigger scroll status update
         requestAnimationFrame(updateScrollStatus)
       }
     }
@@ -119,8 +108,6 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
     el.addEventListener('wheel', handleWheel, { passive: false })
     el.addEventListener('scroll', updateScrollStatus, { passive: true })
     window.addEventListener('resize', updateScrollStatus)
-
-    // Initial check
     updateScrollStatus()
 
     return () => {
@@ -130,117 +117,48 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
     }
   }, [updateScrollStatus])
 
-  // Accessible keyboard navigation
+  // ── Keyboard navigation ────────────────────────────────────────────
   const handleKeyDown = (e: React.KeyboardEvent): void => {
-    const currentIndex = TABS.findIndex((t) => t.id === activeTab)
-    if (currentIndex === -1) return
+    const cur = TABS.findIndex((t) => t.id === activeTab)
+    if (cur === -1) return
 
-    if (e.key === 'ArrowRight') {
-      e.preventDefault()
-      const nextIndex = (currentIndex + 1) % TABS.length
-      const nextTab = TABS[nextIndex].id
-      setActiveTab(nextTab)
-      const nextBtn = containerRef.current?.querySelector(
-        `button[data-tab="${nextTab}"]`
-      ) as HTMLElement | null
-      nextBtn?.focus()
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault()
-      const prevIndex = (currentIndex - 1 + TABS.length) % TABS.length
-      const prevTab = TABS[prevIndex].id
-      setActiveTab(prevTab)
-      const prevBtn = containerRef.current?.querySelector(
-        `button[data-tab="${prevTab}"]`
-      ) as HTMLElement | null
-      prevBtn?.focus()
-    } else if (e.key === 'Home') {
-      e.preventDefault()
-      const firstTab = TABS[0].id
-      setActiveTab(firstTab)
-      const firstBtn = containerRef.current?.querySelector(
-        `button[data-tab="${firstTab}"]`
-      ) as HTMLElement | null
-      firstBtn?.focus()
-    } else if (e.key === 'End') {
-      e.preventDefault()
-      const lastTab = TABS[TABS.length - 1].id
-      setActiveTab(lastTab)
-      const lastBtn = containerRef.current?.querySelector(
-        `button[data-tab="${lastTab}"]`
-      ) as HTMLElement | null
-      lastBtn?.focus()
+    const jump = (idx: number): void => {
+      const tab = TABS[idx].id
+      setActiveTab(tab);
+      (containerRef.current?.querySelector(`button[data-tab="${tab}"]`) as HTMLElement | null)?.focus()
     }
+
+    if      (e.key === 'ArrowRight') { e.preventDefault(); jump((cur + 1) % TABS.length) }
+    else if (e.key === 'ArrowLeft')  { e.preventDefault(); jump((cur - 1 + TABS.length) % TABS.length) }
+    else if (e.key === 'Home')       { e.preventDefault(); jump(0) }
+    else if (e.key === 'End')        { e.preventDefault(); jump(TABS.length - 1) }
   }
 
+  // ── Render ─────────────────────────────────────────────────────────
   return (
-    <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        backgroundColor: 'rgba(125, 125, 125, 0.05)',
-        borderBottom: '1px solid var(--border-subtle)',
-        flexShrink: 0,
-        overflow: 'hidden'
-      }}
-    >
-      {/* Left Scroll Gradient Cue */}
+    <div className="nav-seg-wrap">
+      {/* Left scroll fade */}
       {canScrollLeft && (
-        <div
-          data-testid="nav-fade-left"
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: '28px',
-            background: 'linear-gradient(to right, rgba(18, 21, 21, 0.95), transparent)',
-            pointerEvents: 'none',
-            zIndex: 3
-          }}
-        />
+        <div data-testid="nav-fade-left"  className="nav-seg-fade nav-seg-fade--left"  />
       )}
-
-      {/* Right Scroll Gradient Cue */}
+      {/* Right scroll fade */}
       {canScrollRight && (
-        <div
-          data-testid="nav-fade-right"
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: '28px',
-            background: 'linear-gradient(to left, rgba(18, 21, 21, 0.95), transparent)',
-            pointerEvents: 'none',
-            zIndex: 3
-          }}
-        />
+        <div data-testid="nav-fade-right" className="nav-seg-fade nav-seg-fade--right" />
       )}
 
-      {/* Horizontally Scrollable Tab Container */}
+      {/* Recessed outer track */}
       <div
         ref={containerRef}
         data-testid="tab-bar"
         role="tablist"
         aria-label="Island Navigation Tabs"
         onKeyDown={handleKeyDown}
-        className="nav-tab-bar no-drag"
-        style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '8px 12px',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          whiteSpace: 'nowrap',
-          width: '100%',
-          boxSizing: 'border-box'
-        }}
+        className="nav-seg-track nav-tab-bar no-drag"
       >
         {TABS.map((tab) => {
-          const Icon = tab.icon
+          const Icon     = tab.icon
           const isActive = activeTab === tab.id
+
           return (
             <button
               key={tab.id}
@@ -250,35 +168,23 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
               aria-label={tab.label}
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
-              className="nav-tab-button"
-              style={{
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: 'var(--radius-button)',
-                border: isActive
-                  ? '1px solid var(--border-active)'
-                  : '1px solid transparent',
-                backgroundColor: isActive
-                  ? 'var(--accent-subtle)'
-                  : 'transparent',
-                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                fontFamily: 'var(--font-text)',
-                fontSize: '11px',
-                fontWeight: isActive ? 500 : 400,
-                lineHeight: '14px',
-                letterSpacing: '0',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast)',
-                userSelect: 'none'
-              }}
+              className={`nav-seg-item nav-tab-button${isActive ? ' nav-seg-item--active' : ''}`}
             >
-              <Icon size={13} style={{ flexShrink: 0 }} />
-              <span style={{ lineHeight: '14px' }}>{tab.label}</span>
+              {/* Sliding raised pill — rendered behind content via layoutId */}
+              {isActive && (
+                <motion.span
+                  layoutId="nav-active-pill"
+                  className="nav-seg-pill"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.7 }}
+                  aria-hidden="true"
+                />
+              )}
+
+              {/* Icon + label sit above the pill via relative z-index */}
+              <span className="nav-seg-content">
+                <Icon size={13} className="nav-seg-icon" />
+                <span className="nav-seg-label">{tab.label}</span>
+              </span>
             </button>
           )
         })}
