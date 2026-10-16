@@ -11,6 +11,7 @@ import { MediaWidget } from '../widgets/MediaWidget'
 import { RoutinesWidget } from '../widgets/RoutinesWidget'
 import { SettingsWidget } from '../settings/SettingsWidget'
 import { useIslandStore } from '../../store/useIslandStore'
+import { WINDOW_CONFIG } from '../../shared'
 
 interface ExpandedPanelProps {
   onCollapse: () => void
@@ -42,8 +43,8 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({ onCollapse }) => {
       style={{
         position: 'absolute',
         top: '4px',
-        width: '520px',
-        maxHeight: '540px',
+        width: `${WINDOW_CONFIG.panel.width}px`,
+        maxHeight: `${WINDOW_CONFIG.panel.height}px`,
         transformOrigin: 'top center',
         backgroundColor: 'var(--bg-panel)',
         border: 'none',

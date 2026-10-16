@@ -73,7 +73,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* Search Input Bar */}
       <div
         className="no-drag"
@@ -81,7 +81,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          padding: '10px 14px',
+          padding: '8px 14px',
           backgroundColor: 'var(--bg-input)',
           border: '1px solid var(--accent-border)',
           borderRadius: 'var(--radius-button)',
@@ -153,7 +153,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
       <div
         className="no-drag"
         style={{
-          maxHeight: '190px',
+          maxHeight: '170px',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',

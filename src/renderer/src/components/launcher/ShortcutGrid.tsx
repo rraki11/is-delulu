@@ -9,7 +9,7 @@ interface ShortcutGridProps {
 
 export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <div
         style={{
           display: 'flex',
@@ -67,7 +67,7 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '12px 6px',
+              padding: '10px 6px',
               backgroundColor: 'rgba(18, 21, 21, 0.75)',
               border: '1px solid rgba(255, 255, 255, 0.07)',
               borderRadius: 'var(--radius-card)',

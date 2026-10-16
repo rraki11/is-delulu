@@ -73,7 +73,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const isHidden = mode === 'hidden'
 
   const [windowWidth, setWindowWidth] = useState<number>(
-    typeof window !== 'undefined' ? window.innerWidth : 540
+    typeof window !== 'undefined' ? window.innerWidth : WINDOW_CONFIG.width
   )
 
   useEffect(() => {
@@ -241,8 +241,8 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15, ease: 'easeOut' }}
           style={{
-            width: '520px',
-            height: '536px',
+            width: `${WINDOW_CONFIG.panel.width}px`,
+            height: `${WINDOW_CONFIG.panel.height}px`,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -262,7 +262,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
             flex: 1,
             overflowY: 'auto',
             overflowX: 'hidden',
-            padding: '14px',
+            padding: '12px 14px',
             display: 'flex',
             flexDirection: 'column'
           }}
@@ -277,7 +277,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
             >
               {activeTab === 'launcher' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <CommandSearch onExecuteAction={handleExecuteAction} />
                   <ShortcutGrid onLaunch={handleExecuteAction} />
                 </div>

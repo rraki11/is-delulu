@@ -1,23 +1,23 @@
 import { AppShortcut, CommandItem, DesktopRoutine } from './types'
 
 export const WINDOW_CONFIG = {
-  width: 540,
-  height: 560,
+  width: 660,
+  height: 520,
   collapsed: {
-    width: 540,
-    height: 560
+    width: 660,
+    height: 520
   },
   expanded: {
-    width: 540,
-    height: 560
+    width: 660,
+    height: 520
   },
   pill: {
     width: 190,
     height: 33
   },
   panel: {
-    width: 520,
-    height: 536
+    width: 620,
+    height: 490
   },
   topOffset: 0
 } as const

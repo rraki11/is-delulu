@@ -317,7 +317,7 @@ html, body {
 .nav-seg-wrap {
   position: relative;
   width: 100%;
-  padding: 7px 10px;
+  padding: 5px 10px;
   flex-shrink: 0;
   box-sizing: border-box;
 }

@@ -58,7 +58,7 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '14px 18px',
+        padding: '11px 18px',
         borderBottom: '1px solid var(--border-subtle)',
         userSelect: 'none'
       }}
