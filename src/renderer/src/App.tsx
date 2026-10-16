@@ -83,6 +83,23 @@ export const App: React.FC = () => {
       root.style.setProperty('--border-glass', palette.subtle)
       root.style.setProperty('--text-accent', isLight ? primary : palette.text)
 
+      // Derive per-channel RGBA glow vars for secondary and highlight colors
+      // so the island surface gradient can use all three palette colors independently
+      const hexToRgbChannels = (hex: string): [number, number, number] => {
+        try {
+          const clean = hex.replace('#', '').trim()
+          const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
+          const num = parseInt(full, 16)
+          return [(num >> 16) & 255, (num >> 8) & 255, num & 255]
+        } catch {
+          return [139, 92, 246]
+        }
+      }
+      const [sr, sg, sb] = hexToRgbChannels(palette.secondary)
+      const [hr, hg, hb] = hexToRgbChannels(palette.highlight)
+      root.style.setProperty('--accent-secondary-glow', `rgba(${sr}, ${sg}, ${sb}, 0.22)`)
+      root.style.setProperty('--accent-highlight-glow', `rgba(${hr}, ${hg}, ${hb}, 0.18)`)
+
       // Calculate accessible contrast for text rendered directly on --accent backgrounds
       let lum = 0.5
       try {

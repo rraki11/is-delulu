@@ -187,8 +187,12 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           zIndex: 100
         }}
       >
-        {/* Wallpaper-adaptive soft gradient fill */}
-        <div className={`island-accent-fill${isExpanded ? ' expanded' : ''}`} aria-hidden="true" />
+        {/* Wallpaper-adaptive animated gradient — three color orbs drift independently */}
+        <div className={`island-gradient-stage${isExpanded ? ' expanded' : ''}`} aria-hidden="true">
+          <div className="island-grad-orb island-grad-orb--primary" />
+          <div className="island-grad-orb island-grad-orb--secondary" />
+          <div className="island-grad-orb island-grad-orb--highlight" />
+        </div>
 
       {/* Collapsed Pill Content (Minimal Digital Clock Only) */}
       {!isExpanded && (

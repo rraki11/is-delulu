@@ -341,21 +341,21 @@ html, body {
 
 /* =====================================================================
  * Wallpaper-Adaptive Gradient Glow System
- * Colors are 100% derived from --accent-glow / --accent-subtle CSS vars
- * which are updated live by applyAccentPalette() in App.tsx.
- * No hardcoded hues. Works with wallpaper, manual, and default modes.
+ * Three independently-animated colour orbs — primary, secondary, highlight.
+ * All colours come from CSS vars set live by applyAccentPalette() in App.tsx.
+ * Primary uses  --accent-glow          (palette.primary  @ 28% alpha)
+ * Secondary uses --accent-secondary-glow (palette.secondary @ 22% alpha)
+ * Highlight uses --accent-highlight-glow (palette.highlight @ 18% alpha)
  * ===================================================================== */
 
-/* Gentle breath — single slow pulse, no spinning or strobing */
+/* Gentle breath — single slow pulse on the outer halo */
 @keyframes accentBreath {
-  0%   { opacity: 0.65; }
-  50%  { opacity: 1.00; }
-  100% { opacity: 0.70; }
+  0%   { opacity: 0.55; }
+  50%  { opacity: 0.90; }
+  100% { opacity: 0.60; }
 }
 
 /* ── Outer halo ───────────────────────────────────────────────────── */
-/* Sits OUTSIDE the island surface (overflow:hidden sibling).          */
-/* Centered ellipse + blur creates an even corona around the pill.     */
 .island-accent-glow {
   background: radial-gradient(
     ellipse 75% 85% at 50% 55%,
@@ -367,83 +367,130 @@ html, body {
   animation: accentBreath 8s ease-in-out infinite alternate;
 }
 
-/* ── Inner fill ───────────────────────────────────────────────────── */
-/* Inside the island surface, z-index 1 (below rim at z-index 9/10).  */
-/* Two overlapping accent pools from opposing corners give depth.      */
-/* Uses --accent-glow (pre-composited RGBA) so opacity is reliable.   */
-.island-accent-fill {
+/* ── Stage: clips orbs to the island's rounded shape ─────────────── */
+.island-gradient-stage {
   position: absolute;
   inset: 0;
   border-radius: inherit;
+  overflow: hidden;
   pointer-events: none;
   z-index: 1;
-  background:
-    /* Pool 1a: top-left sweep, first layer */
-    radial-gradient(
-      ellipse 90% 130% at 18% 10%,
-      var(--accent-glow)   0%,
-      transparent          70%
-    ),
-    /* Pool 1b: top-left sweep, second layer to build opacity */
-    radial-gradient(
-      ellipse 70% 110% at 15% 15%,
-      var(--accent-glow)   0%,
-      transparent          65%
-    ),
-    /* Pool 2: bottom-right sweep */
-    radial-gradient(
-      ellipse 80% 120% at 88% 92%,
-      var(--accent-glow)   0%,
-      var(--accent-subtle) 45%,
-      transparent          72%
-    ),
-    /* Center darkening well — keeps clock text readable */
-    radial-gradient(
-      ellipse 55% 80% at 50% 50%,
-      rgba(0, 0, 0, 0.38) 0%,
-      transparent         100%
-    );
 }
 
-/* Expanded panel variant: pools shift to frame the taller surface */
-.island-accent-fill.expanded {
-  background:
-    /* Top-left pool */
-    radial-gradient(
-      ellipse 60% 45% at 12% 8%,
-      var(--accent-glow)   0%,
-      transparent          65%
-    ),
-    /* Top-left second layer */
-    radial-gradient(
-      ellipse 45% 35% at 10% 10%,
-      var(--accent-glow)   0%,
-      transparent          60%
-    ),
-    /* Bottom-right pool */
-    radial-gradient(
-      ellipse 55% 42% at 90% 93%,
-      var(--accent-glow)   0%,
-      var(--accent-subtle) 45%,
-      transparent          72%
-    ),
-    /* Left-edge side reflection */
-    radial-gradient(
-      ellipse 18% 80% at 0% 50%,
-      var(--accent-subtle) 0%,
-      transparent          100%
-    ),
-    /* Center darkening well */
-    radial-gradient(
-      ellipse 60% 65% at 50% 50%,
-      rgba(0, 0, 0, 0.28) 0%,
-      transparent         100%
-    );
+/* ── Individual orbs ──────────────────────────────────────────────── */
+.island-grad-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/*
+ * Orb A — PRIMARY colour
+ * Starts at top-left, drifts slowly right-and-down, then returns.
+ * Duration 14s — the slowest, largest, most visible orb.
+ */
+.island-grad-orb--primary {
+  width: 110%;
+  height: 160%;
+  top: -80%;
+  left: -15%;
+  background: radial-gradient(
+    ellipse at center,
+    var(--accent-glow) 0%,
+    transparent        65%
+  );
+  opacity: 0.85;
+  animation: orbPrimary 14s ease-in-out infinite;
+}
+
+/*
+ * Orb B — SECONDARY colour
+ * Starts at bottom-right, drifts opposite to orb A.
+ * Duration 19s — medium speed, opposite phase.
+ */
+.island-grad-orb--secondary {
+  width: 95%;
+  height: 140%;
+  bottom: -70%;
+  right: -15%;
+  background: radial-gradient(
+    ellipse at center,
+    var(--accent-secondary-glow) 0%,
+    transparent                  65%
+  );
+  opacity: 0.75;
+  animation: orbSecondary 19s ease-in-out infinite;
+}
+
+/*
+ * Orb C — HIGHLIGHT colour (complementary hue)
+ * Starts centred, traces a small circular path.
+ * Duration 24s — slowest, adds a third subtle hue layer.
+ */
+.island-grad-orb--highlight {
+  width: 80%;
+  height: 120%;
+  top: -20%;
+  left: 10%;
+  background: radial-gradient(
+    ellipse at center,
+    var(--accent-highlight-glow) 0%,
+    transparent                  70%
+  );
+  opacity: 0.55;
+  animation: orbHighlight 24s ease-in-out infinite;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────── */
+@keyframes orbPrimary {
+  0%   { transform: translate(0%,   0%)   scale(1.00); }
+  25%  { transform: translate(28%,  22%)  scale(1.08); }
+  50%  { transform: translate(50%,  10%)  scale(0.96); }
+  75%  { transform: translate(18%,  35%)  scale(1.04); }
+  100% { transform: translate(0%,   0%)   scale(1.00); }
+}
+
+@keyframes orbSecondary {
+  0%   { transform: translate(0%,   0%)   scale(1.00); }
+  30%  { transform: translate(-35%, -15%) scale(1.10); }
+  60%  { transform: translate(-60%,  5%)  scale(0.92); }
+  80%  { transform: translate(-25%, -30%) scale(1.05); }
+  100% { transform: translate(0%,   0%)   scale(1.00); }
+}
+
+@keyframes orbHighlight {
+  0%   { transform: translate(0%,   0%)   scale(1.00); }
+  20%  { transform: translate(20%,  -25%) scale(1.06); }
+  45%  { transform: translate(-10%, 20%)  scale(0.95); }
+  70%  { transform: translate(30%,  10%)  scale(1.04); }
+  100% { transform: translate(0%,   0%)   scale(1.00); }
+}
+
+/* ── Expanded panel overrides: scale up orb coverage ─────────────── */
+/* Orbs are positioned as % of the container so they naturally adapt, */
+/* but we soften opacity slightly so the larger surface feels lighter. */
+.island-gradient-stage.expanded .island-grad-orb--primary   { opacity: 0.65; }
+.island-gradient-stage.expanded .island-grad-orb--secondary { opacity: 0.55; }
+.island-gradient-stage.expanded .island-grad-orb--highlight { opacity: 0.42; }
+
+/* Center-darkening veil on expanded panel for text readability */
+.island-gradient-stage.expanded::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 55% 60% at 50% 50%,
+    rgba(0, 0, 0, 0.30) 0%,
+    transparent         100%
+  );
+  pointer-events: none;
 }
 
 /* Respect user's reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
-  .island-accent-glow {
+  .island-accent-glow,
+  .island-grad-orb {
     animation: none !important;
   }
 }
