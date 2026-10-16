@@ -339,6 +339,82 @@ html, body {
   animation: pulseGlow 2.4s ease-in-out infinite;
 }
 
+/* =====================================================================
+ * Wallpaper-Adaptive Gradient Glow System
+ * Colors are 100% derived from --accent / --accent-glow / --accent-subtle
+ * CSS custom properties, which are updated live by applyAccentPalette()
+ * in App.tsx whenever the wallpaper or accent mode changes.
+ * No hardcoded hues. Works with wallpaper, manual, and default modes.
+ * ===================================================================== */
+
+/* Gentle breath — single slow pulse, no spinning or strobing */
+@keyframes accentBreath {
+  0%   { opacity: 0.60; }
+  50%  { opacity: 0.85; }
+  100% { opacity: 0.62; }
+}
+
+/* ── Outer halo ───────────────────────────────────────────────────── */
+/* Sits OUTSIDE the island surface (overflow:hidden sibling).           */
+/* Uses --accent-glow which is pre-composited with low alpha.           */
+.island-accent-glow {
+  /* Radial gradient: accent color concentrated near edges,             */
+  /* transparent at center so the dark pill body reads clearly.         */
+  background: radial-gradient(
+    ellipse 100% 100% at 50% 100%,
+    var(--accent-glow)        0%,
+    var(--accent-glow)        30%,
+    transparent               72%
+  );
+  filter: blur(14px);
+  /* Restrained: only the glow var's own opacity determines brightness */
+  animation: accentBreath 8s ease-in-out infinite alternate;
+}
+
+/* ── Inner fill ───────────────────────────────────────────────────── */
+/* Inside the island surface, z-index 1 (below rim at z-index 9/10).   */
+/* Darker center preserves text readability; luminous perimeter edge.   */
+.island-accent-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  /* Dark center → subtle accent wash toward the rounded edges */
+  background: radial-gradient(
+    ellipse 110% 160% at 50% 110%,
+    /* Transparent center \u2014 pill black shows through for readability */
+    transparent                             0%,
+    transparent                             35%,
+    /* Begin very faint accent tint toward bottom curve */
+    color-mix(in srgb, var(--accent) 7%, transparent)   55%,
+    /* Brightest at the rounded bottom perimeter */
+    color-mix(in srgb, var(--accent) 12%, transparent)  75%,
+    /* Fade back out past the bottom edge */
+    transparent                             90%
+  );
+}
+
+/* Expanded panel: slightly shifted fill so the accent reads at top too */
+.island-accent-fill.expanded {
+  background: radial-gradient(
+    ellipse 110% 120% at 50% 0%,
+    color-mix(in srgb, var(--accent) 5%, transparent)   0%,
+    transparent                                          30%,
+    transparent                                          70%,
+    color-mix(in srgb, var(--accent) 8%, transparent)   88%,
+    transparent                                          100%
+  );
+}
+
+/* Respect user's reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .island-accent-glow {
+    animation: none !important;
+    filter: blur(14px) !important;
+  }
+}
+
 /* -------------------------------------------------------------
  * Iridescent Metallic Lighting Effect (Outer Perimeter Only)
  * Precision 1.25px metallic rim with anisotropic prismatic dispersion

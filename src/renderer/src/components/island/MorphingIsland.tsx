@@ -88,82 +88,116 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const integerLeft = Math.floor((windowWidth - targetWidth) / 2)
 
   return (
-    <motion.div
-      id="island-surface"
-      role={mode === 'collapsed' ? 'button' : undefined}
-      tabIndex={mode === 'collapsed' ? 0 : undefined}
-      onClick={mode === 'collapsed' ? onExpand : undefined}
-      onKeyDown={
-        mode === 'collapsed'
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onExpand()
-              }
-            }
-          : undefined
-      }
-      onPointerEnter={onPointerEnter}
-      onPointerLeave={onPointerLeave}
-      initial={false}
-      animate={{
-        left: integerLeft,
-        width: targetWidth,
-        height: isExpanded ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height,
-        borderRadius: isExpanded ? '0px 0px 22px 22px' : '0px 0px 17px 17px',
-        backgroundColor: isExpanded ? 'var(--bg-panel)' : 'var(--bg-pill)',
-        boxShadow: isHidden
-          ? 'none'
-          : isExpanded
-          ? 'var(--shadow-panel)'
-          : 'var(--shadow-pill)',
-        y: isHidden ? -48 : 0,
-        opacity: isHidden ? 0 : 1
-      }}
-      whileTap={
-        mode === 'collapsed'
-          ? { scale: 0.98 }
-          : undefined
-      }
-      transition={{
-        type: 'spring',
-        stiffness: 360,
-        damping: 30,
-        mass: 0.8
-      }}
-      onAnimationComplete={() => {
-        if (mode === 'hidden' && window.isDelulu) {
-          window.isDelulu.setIslandMode('hidden')
-        }
-      }}
-      title={mode === 'collapsed' ? 'Click to expand' : undefined}
-      style={{
-        position: 'absolute',
-        top: 0,
-        transformOrigin: 'top center',
-        originX: 0.5,
-        originY: 0,
-        border: 'none',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        cursor: mode === 'collapsed' ? 'pointer' : 'default',
-        userSelect: 'none',
-        outline: 'none',
-        pointerEvents: isHidden ? 'none' : 'auto',
-        zIndex: 100
-      }}
-    >
-      {/* Precision Iridescent Metallic Rim (strictly on outer 1.25px perimeter) */}
-      <div
-        className={`island-iridescent-rim ${isExpanded ? 'expanded' : ''}`}
+    <>
+      {/* Wallpaper-adaptive gradient halo — sits OUTSIDE overflow:hidden so it bleeds */}
+      <motion.div
         aria-hidden="true"
+        className="island-accent-glow"
+        initial={false}
+        animate={{
+          left: integerLeft - 18,
+          width: targetWidth + 36,
+          height: (isExpanded ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height) + 16,
+          borderRadius: isExpanded ? '0px 0px 30px 30px' : '0px 0px 24px 24px',
+          y: isHidden ? -48 : 0,
+          opacity: isHidden ? 0 : 1
+        }}
+        transition={{
+          type: 'spring',
+          stiffness: 360,
+          damping: 30,
+          mass: 0.8
+        }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          transformOrigin: 'top center',
+          originX: 0.5,
+          originY: 0,
+          pointerEvents: 'none',
+          zIndex: 99
+        }}
       />
 
-      {/* Inner Metallic Chamfer & Depth Separator */}
-      <div className="island-inner-bevel" aria-hidden="true" />
+      <motion.div
+        id="island-surface"
+        role={mode === 'collapsed' ? 'button' : undefined}
+        tabIndex={mode === 'collapsed' ? 0 : undefined}
+        onClick={mode === 'collapsed' ? onExpand : undefined}
+        onKeyDown={
+          mode === 'collapsed'
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onExpand()
+                }
+              }
+            : undefined
+        }
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
+        initial={false}
+        animate={{
+          left: integerLeft,
+          width: targetWidth,
+          height: isExpanded ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height,
+          borderRadius: isExpanded ? '0px 0px 22px 22px' : '0px 0px 17px 17px',
+          backgroundColor: isExpanded ? 'var(--bg-panel)' : 'var(--bg-pill)',
+          boxShadow: isHidden
+            ? 'none'
+            : isExpanded
+            ? 'var(--shadow-panel)'
+            : 'var(--shadow-pill)',
+          y: isHidden ? -48 : 0,
+          opacity: isHidden ? 0 : 1
+        }}
+        whileTap={
+          mode === 'collapsed'
+            ? { scale: 0.98 }
+            : undefined
+        }
+        transition={{
+          type: 'spring',
+          stiffness: 360,
+          damping: 30,
+          mass: 0.8
+        }}
+        onAnimationComplete={() => {
+          if (mode === 'hidden' && window.isDelulu) {
+            window.isDelulu.setIslandMode('hidden')
+          }
+        }}
+        title={mode === 'collapsed' ? 'Click to expand' : undefined}
+        style={{
+          position: 'absolute',
+          top: 0,
+          transformOrigin: 'top center',
+          originX: 0.5,
+          originY: 0,
+          border: 'none',
+          overflow: 'hidden',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          cursor: mode === 'collapsed' ? 'pointer' : 'default',
+          userSelect: 'none',
+          outline: 'none',
+          pointerEvents: isHidden ? 'none' : 'auto',
+          zIndex: 100
+        }}
+      >
+        {/* Wallpaper-adaptive soft gradient fill — z-index 1, below rim/bevel */}
+        <div className={`island-accent-fill${isExpanded ? ' expanded' : ''}`} aria-hidden="true" />
+
+        {/* Precision Iridescent Metallic Rim (strictly on outer 1.25px perimeter) */}
+        <div
+          className={`island-iridescent-rim ${isExpanded ? 'expanded' : ''}`}
+          aria-hidden="true"
+        />
+
+        {/* Inner Metallic Chamfer & Depth Separator */}
+        <div className="island-inner-bevel" aria-hidden="true" />
 
       {/* Collapsed Pill Content (Minimal Digital Clock Only) */}
       {!isExpanded && (
@@ -264,7 +298,8 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         </div>
         </motion.div>
       )}
-    </motion.div>
+      </motion.div>
+    </>
   )
 }
 
