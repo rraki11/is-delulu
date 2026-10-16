@@ -36,6 +36,11 @@ import {
   onPreferencesChange,
   onThemeChange
 } from './services/preferences'
+import {
+  resolveActivePalette,
+  startWallpaperMonitor,
+  stopWallpaperMonitor
+} from './services/wallpaper'
 import { IslandMode, UserPreferences, MediaControlAction } from '../shared/types'
 
 app.setName('is-delulu')
@@ -120,6 +125,14 @@ if (!gotTheLock) {
     }
   })
 
+  // Start real-time desktop wallpaper change monitor
+  startWallpaperMonitor((palette) => {
+    const prefs = getPreferences()
+    if (prefs.accentMode === 'wallpaper' && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('theme:accent-updated', palette)
+    }
+  })
+
   // Stream periodic system metrics
   const sysTimer = setInterval(() => {
     if (!mainWindow.isDestroyed()) {
@@ -133,6 +146,7 @@ if (!gotTheLock) {
     stopActivationMonitor()
     stopClipboardMonitor()
     stopMediaMonitor()
+    stopWallpaperMonitor()
     globalShortcut.unregisterAll()
   })
 
@@ -199,11 +213,19 @@ if (!gotTheLock) {
     if (partial.isPinned !== undefined) {
       mainWindow.setAlwaysOnTop(Boolean(partial.isPinned), 'screen-saver')
     }
+    if (partial.accentMode !== undefined || partial.manualAccentColor !== undefined) {
+      const palette = resolveActivePalette(updated)
+      mainWindow.webContents.send('theme:accent-updated', palette)
+    }
     return updated
   })
 
   ipcMain.handle('theme:get-resolved', () => {
     return getResolvedTheme()
+  })
+
+  ipcMain.handle('theme:get-accent-palette', () => {
+    return resolveActivePalette(getPreferences())
   })
 
   // System stats

@@ -83,9 +83,9 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
           gap: '10px',
           padding: '10px 14px',
           backgroundColor: 'var(--bg-input)',
-          border: '1px solid rgba(187, 255, 0, 0.25)',
+          border: '1px solid var(--accent-border)',
           borderRadius: 'var(--radius-button)',
-          boxShadow: '0 0 16px -4px rgba(187, 255, 0, 0.15)'
+          boxShadow: '0 0 16px -4px var(--accent-glow)'
         }}
       >
         <Search size={16} color="var(--accent)" />
@@ -106,7 +106,10 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
             outline: 'none',
             color: 'var(--text-primary)',
             fontSize: '13px',
-            fontFamily: 'inherit'
+            fontWeight: 400,
+            lineHeight: '18px',
+            fontFamily: 'var(--font-text)',
+            letterSpacing: '0'
           }}
         />
         {searchQuery ? (
@@ -117,6 +120,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
               border: 'none',
               color: 'var(--text-muted)',
               fontSize: '11px',
+              fontFamily: 'var(--font-text)',
               cursor: 'pointer'
             }}
           >
@@ -129,10 +133,14 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
               alignItems: 'center',
               gap: '4px',
               fontSize: '10px',
+              fontWeight: 500,
+              lineHeight: '12px',
+              fontFamily: 'var(--font-text)',
               color: 'var(--text-muted)',
               backgroundColor: 'rgba(255, 255, 255, 0.05)',
               padding: '2px 6px',
-              borderRadius: '4px'
+              borderRadius: '4px',
+              letterSpacing: '0.02em'
             }}
           >
             <span>Navigate</span>
@@ -159,7 +167,10 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
               padding: '24px 0',
               textAlign: 'center',
               color: 'var(--text-muted)',
-              fontSize: '12px'
+              fontSize: '12px',
+              fontWeight: 400,
+              lineHeight: '16px',
+              fontFamily: 'var(--font-text)'
             }}
           >
             No commands or apps matching &quot;{searchQuery}&quot;
@@ -178,9 +189,9 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                   justifyContent: 'space-between',
                   padding: '8px 12px',
                   borderRadius: '10px',
-                  backgroundColor: isSelected ? 'rgba(187, 255, 0, 0.1)' : 'transparent',
+                  backgroundColor: isSelected ? 'var(--accent-subtle)' : 'transparent',
                   border: isSelected
-                    ? '1px solid rgba(187, 255, 0, 0.28)'
+                    ? '1px solid var(--accent-border)'
                     : '1px solid transparent',
                   cursor: 'pointer',
                   transition: 'background var(--transition-fast)'
@@ -193,7 +204,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                       height: '28px',
                       borderRadius: '8px',
                       backgroundColor: isSelected
-                        ? 'rgba(187, 255, 0, 0.16)'
+                        ? 'var(--accent-glow)'
                         : 'rgba(255, 255, 255, 0.05)',
                       display: 'flex',
                       alignItems: 'center',
@@ -203,13 +214,16 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                   >
                     <IconBadge name={item.icon} size={15} />
                   </div>
-                  <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span
                         style={{
                           fontSize: '12px',
-                          fontWeight: 600,
-                          color: isSelected ? 'var(--text-primary)' : 'var(--text-primary)'
+                          fontWeight: 500,
+                          lineHeight: '16px',
+                          letterSpacing: '0',
+                          color: 'var(--text-primary)',
+                          fontFamily: 'var(--font-text)'
                         }}
                       >
                         {item.title}
@@ -217,19 +231,32 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                       <span
                         style={{
                           fontSize: '9px',
+                          fontWeight: 500,
+                          lineHeight: '12px',
+                          letterSpacing: '0.02em',
                           padding: '1px 5px',
                           borderRadius: '4px',
                           backgroundColor: item.isReal
-                            ? 'rgba(187, 255, 0, 0.12)'
+                            ? 'var(--accent-subtle)'
                             : 'rgba(255, 255, 255, 0.06)',
                           color: item.isReal ? 'var(--accent)' : 'var(--text-muted)',
-                          fontWeight: 500
+                          fontFamily: 'var(--font-text)'
                         }}
                       >
                         {item.isReal ? 'Native' : 'Mock'}
                       </span>
                     </div>
-                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '11px',
+                        fontWeight: 400,
+                        lineHeight: '15px',
+                        letterSpacing: '0',
+                        color: 'var(--text-secondary)',
+                        fontFamily: 'var(--font-text)'
+                      }}
+                    >
                       {item.description}
                     </p>
                   </div>
@@ -240,10 +267,14 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                     <span
                       style={{
                         fontSize: '10px',
+                        fontWeight: 500,
+                        lineHeight: '12px',
+                        letterSpacing: '0.02em',
                         padding: '2px 6px',
                         borderRadius: '4px',
                         backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                        color: 'var(--text-muted)'
+                        color: 'var(--text-muted)',
+                        fontFamily: 'var(--font-text)'
                       }}
                     >
                       {item.shortcut}

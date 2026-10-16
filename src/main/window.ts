@@ -64,6 +64,7 @@ export function createMainWindow(): BrowserWindow {
     height: initialHeight,
     x: initialX,
     y: initialY,
+    useContentSize: true,
     show: false,
     frame: false,
     transparent: true,
@@ -199,7 +200,13 @@ export function setIslandWindowMode(mode: IslandMode): void {
 
   if (mode === 'hidden') {
     if (!forceVisibleDebug) {
-      mainWindow.hide()
+      mainWindow.setIgnoreMouseEvents(true, { forward: true })
+      // Allow the smooth collapse animation into the top border to finish before native hide
+      setTimeout(() => {
+        if (currentMode === 'hidden' && mainWindow && !mainWindow.isDestroyed() && !forceVisibleDebug) {
+          mainWindow.hide()
+        }
+      }, 400)
     }
     return
   }
@@ -232,9 +239,14 @@ export function hideIslandWindow(): void {
   if (prefs.isPinned) return // Respect pinned state
 
   currentMode = 'hidden'
-  mainWindow.hide()
+  mainWindow.setIgnoreMouseEvents(true, { forward: true })
   mainWindow.webContents.send('island:mode-changed', 'hidden')
-  console.log('[is-delulu:window] hideIslandWindow executed')
+  setTimeout(() => {
+    if (currentMode === 'hidden' && mainWindow && !mainWindow.isDestroyed() && !forceVisibleDebug) {
+      mainWindow.hide()
+    }
+  }, 400)
+  console.log('[is-delulu:window] hideIslandWindow executed with smooth transition')
 }
 
 /**
@@ -266,12 +278,12 @@ export function startActivationMonitor(): void {
 
     // 1. Narrow top-edge activation zone:
     // Physical monitor top ceiling: pt.y >= workY && pt.y <= workY + 2 (only top 2-3 pixels)
-    // Horizontally centered matching the collapsed pill width (184px -> +/- 92px)
+    // Horizontally centered matching the collapsed pill width (e.g. 190px -> +/- 95px)
     // This strictly prevents triggering during normal mouse movement over Brave browser tabs.
     const inTopEdgeActivationZone =
       pt.y >= workY &&
       pt.y <= workY + 2 &&
-      Math.abs(pt.x - centerX) <= 92
+      Math.abs(pt.x - centerX) <= Math.ceil(WINDOW_CONFIG.pill.width / 2)
 
     if (inTopEdgeActivationZone) {
       if (!mainWindow.isVisible() || currentMode === 'hidden') {

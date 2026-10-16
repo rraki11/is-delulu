@@ -7,6 +7,7 @@ import {
   MediaState,
   DesktopRoutine,
   UserPreferences,
+  AccentPalette,
   DEFAULT_ROUTINES
 } from '../shared'
 
@@ -22,6 +23,7 @@ interface IslandState {
   statusMessage: string | null
   preferences: UserPreferences | null
   theme: 'light' | 'dark'
+  accentPalette: AccentPalette | null
   isHovered: boolean
 
   setMode: (mode: IslandMode) => void
@@ -35,6 +37,7 @@ interface IslandState {
   setStatusMessage: (msg: string | null) => void
   setPreferences: (prefs: Partial<UserPreferences>) => void
   setTheme: (theme: 'light' | 'dark') => void
+  setAccentPalette: (palette: AccentPalette) => void
   setIsHovered: (hovered: boolean) => void
 }
 
@@ -50,6 +53,7 @@ export const useIslandStore = create<IslandState>((set) => ({
   statusMessage: null,
   preferences: null,
   theme: 'dark',
+  accentPalette: null,
   isHovered: false,
 
   setMode: (mode) => set({ mode }),
@@ -68,9 +72,17 @@ export const useIslandStore = create<IslandState>((set) => ({
         clockFormat: '12h',
         appearance: 'system',
         isPinned: false,
+        accentMode: 'wallpaper',
+        manualAccentColor: '#8B5CF6',
         ...newPrefs
       } as UserPreferences)
     })),
   setTheme: (theme) => set({ theme }),
+  setAccentPalette: (accentPalette) => set({ accentPalette }),
   setIsHovered: (isHovered) => set({ isHovered })
 }))
+
+if (typeof window !== 'undefined') {
+  ;(window as any).__islandStore = useIslandStore
+}
+

@@ -35,12 +35,14 @@ export const RoutinesWidget: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span
+          className="font-display"
           style={{
+            fontFamily: 'var(--font-display)',
             fontSize: '11px',
-            fontWeight: 600,
+            fontWeight: 700,
             color: 'var(--text-secondary)',
             textTransform: 'uppercase',
-            letterSpacing: '0.06em'
+            letterSpacing: '0.05em'
           }}
         >
           Automated Desktop Routines
@@ -68,10 +70,10 @@ export const RoutinesWidget: React.FC = () => {
                 padding: '12px 14px',
                 cursor: 'pointer',
                 borderColor: routine.isActive
-                  ? 'rgba(187, 255, 0, 0.35)'
+                  ? 'var(--accent-border)'
                   : 'rgba(255, 255, 255, 0.07)',
                 backgroundColor: routine.isActive
-                  ? 'rgba(187, 255, 0, 0.06)'
+                  ? 'var(--accent-subtle)'
                   : 'rgba(18, 21, 21, 0.72)'
               }}
             >
@@ -90,7 +92,7 @@ export const RoutinesWidget: React.FC = () => {
                       height: '28px',
                       borderRadius: '8px',
                       backgroundColor: routine.isActive
-                        ? 'rgba(187, 255, 0, 0.15)'
+                        ? 'var(--accent-glow)'
                         : 'rgba(255, 255, 255, 0.05)',
                       display: 'flex',
                       alignItems: 'center',
@@ -102,10 +104,13 @@ export const RoutinesWidget: React.FC = () => {
 
                   <div>
                     <span
+                      className="font-text"
                       style={{
+                        fontFamily: 'var(--font-text)',
                         fontSize: '12px',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)'
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        letterSpacing: '-0.005em'
                       }}
                     >
                       {routine.name}
@@ -138,10 +143,10 @@ export const RoutinesWidget: React.FC = () => {
                     padding: '3px 8px',
                     borderRadius: '9999px',
                     backgroundColor: routine.isActive
-                      ? 'rgba(187, 255, 0, 0.18)'
+                      ? 'var(--accent-glow)'
                       : 'rgba(255, 255, 255, 0.05)',
                     border: routine.isActive
-                      ? '1px solid rgba(187, 255, 0, 0.3)'
+                      ? '1px solid var(--accent-border)'
                       : '1px solid rgba(255, 255, 255, 0.08)',
                     color: routine.isActive ? 'var(--accent)' : 'var(--text-muted)',
                     fontSize: '10px',
@@ -153,7 +158,17 @@ export const RoutinesWidget: React.FC = () => {
                 </div>
               </div>
 
-              <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              <p
+                className="font-text"
+                style={{
+                  fontFamily: 'var(--font-text)',
+                  fontSize: '11px',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '8px',
+                  lineHeight: 1.4,
+                  letterSpacing: '-0.003em'
+                }}
+              >
                 {routine.description}
               </p>
 

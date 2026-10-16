@@ -42,11 +42,6 @@ export const IslandPill: React.FC<IslandPillProps> = ({ onExpand }) => {
       initial={{ y: -34, opacity: 0, scale: 1 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       exit={{ y: -34, opacity: 0, scale: 1 }}
-      whileHover={{
-        scale: 1.035,
-        y: 0,
-        transition: { duration: 0.16, ease: 'easeOut' }
-      }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
       title="Click to expand"
@@ -56,11 +51,10 @@ export const IslandPill: React.FC<IslandPillProps> = ({ onExpand }) => {
         transformOrigin: 'top center',
         originX: 0.5,
         originY: 0,
-        width: '184px',
-        height: '32px',
+        width: '190px',
+        height: '33px',
         backgroundColor: 'var(--bg-pill)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderTop: 'none',
+        border: 'none',
         borderRadius: 'var(--radius-pill)',
         boxShadow: 'var(--shadow-pill)',
         display: 'flex',
@@ -74,14 +68,20 @@ export const IslandPill: React.FC<IslandPillProps> = ({ onExpand }) => {
         boxSizing: 'border-box'
       }}
     >
+      {/* Precision Iridescent Metallic Rim */}
+      <div className="island-iridescent-rim" aria-hidden="true" />
+      {/* Inner Metallic Chamfer */}
+      <div className="island-inner-bevel" aria-hidden="true" />
+
       {/* Minimal Digital Clock */}
       <span
-        className="tabular-nums"
+        className="tabular-nums font-display"
         style={{
+          fontFamily: 'var(--font-display)',
           fontSize: '12px',
-          fontWeight: 600,
+          fontWeight: 500,
           color: '#F4F5F0',
-          letterSpacing: '0.02em',
+          letterSpacing: '0',
           lineHeight: 1
         }}
       >

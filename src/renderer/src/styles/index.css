@@ -1,10 +1,196 @@
 @import './design-tokens.css';
 
+/* -------------------------------------------------------------
+ * Apple SF Pro Font-Face Directives
+ * Loads bundled SF Pro Display OTF font assets with local font fallback
+ * ------------------------------------------------------------- */
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 300;
+  src:
+    local('SF Pro Display Light'),
+    local('SFProDisplay-Light'),
+    url('../assets/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 400;
+  src:
+    local('SF Pro Display Regular'),
+    local('SF Pro Display'),
+    local('SFProDisplay-Regular'),
+    local('SFProDisplay'),
+    url('../assets/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 500;
+  src:
+    local('SF Pro Display Medium'),
+    local('SFProDisplay-Medium'),
+    url('../assets/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 600;
+  src:
+    local('SF Pro Display Semibold'),
+    local('SFProDisplay-Semibold'),
+    url('../assets/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 700;
+  src:
+    local('SF Pro Display Bold'),
+    local('SFProDisplay-Bold'),
+    url('../assets/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+  font-display: block;
+}
+
+/* SF Pro Display Italic Variants */
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: italic;
+  font-weight: 300;
+  src:
+    local('SF Pro Display Light Italic'),
+    url('../assets/fonts/SFPRODISPLAYLIGHTITALIC.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: italic;
+  font-weight: 600;
+  src:
+    local('SF Pro Display Semibold Italic'),
+    url('../assets/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
+  font-display: block;
+}
+
+/* SF Pro Text Mappings (aliases resolving to bundled SF Pro Display files with fallback) */
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 400;
+  src:
+    local('SF Pro Text Regular'),
+    local('SF Pro Text'),
+    local('SFProText-Regular'),
+    local('SFProText'),
+    url('../assets/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 500;
+  src:
+    local('SF Pro Text Medium'),
+    local('SFProText-Medium'),
+    url('../assets/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 600;
+  src:
+    local('SF Pro Text Semibold'),
+    local('SFProText-Semibold'),
+    url('../assets/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 700;
+  src:
+    local('SF Pro Text Bold'),
+    local('SFProText-Bold'),
+    url('../assets/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+  font-display: block;
+}
+
+/* Canonical SF Pro Family */
+@font-face {
+  font-family: 'SF Pro';
+  font-style: normal;
+  font-weight: 400;
+  src:
+    local('SF Pro Regular'),
+    local('SF Pro'),
+    url('../assets/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro';
+  font-style: normal;
+  font-weight: 500;
+  src:
+    local('SF Pro Medium'),
+    url('../assets/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro';
+  font-style: normal;
+  font-weight: 600;
+  src:
+    local('SF Pro Semibold'),
+    url('../assets/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'SF Pro';
+  font-style: normal;
+  font-weight: 700;
+  src:
+    local('SF Pro Bold'),
+    url('../assets/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+  font-display: block;
+}
+
 /* Reset & Window Setup */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-feature-settings: normal;
+  text-rendering: optimizeLegibility;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  font-family: var(--font-text);
+  font-size: inherit;
+  line-height: inherit;
+  opacity: 0.85;
 }
 
 html, body {
@@ -14,11 +200,13 @@ html, body {
   background: transparent !important;
   background-color: transparent !important;
   color: var(--text-primary);
-  /* Typography: Prefer SF Pro if installed, falling back to Segoe UI Variable and system fonts */
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  /* Typography: Prefer SF Pro Text/Display with Segoe UI system fallbacks */
+  font-family: var(--font-text);
+  letter-spacing: var(--tracking-text);
   user-select: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -26,16 +214,29 @@ html, body {
   height: 100%;
   background: transparent !important;
   background-color: transparent !important;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  display: block;
   padding-top: 0;
 }
 
-/* Numeric clock tabular alignment */
+/* Typography Utility Classes */
+.font-display {
+  font-family: var(--font-display) !important;
+  letter-spacing: var(--tracking-display);
+}
+
+.font-text {
+  font-family: var(--font-text) !important;
+  letter-spacing: var(--tracking-text);
+}
+
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+/* Numeric tabular alignment for clocks, timers, dates */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
+  font-feature-settings: 'tnum' 1;
 }
 
 /* Glassmorphism Surfaces */
@@ -89,6 +290,7 @@ html, body {
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -102,6 +304,23 @@ html, body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-muted);
+}
+
+/* Navigation Tab Bar Scrollbar & Focus */
+.nav-tab-bar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav-tab-bar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.nav-tab-button:focus-visible {
+  outline: 1.5px solid var(--accent) !important;
+  outline-offset: 1px !important;
 }
 
 /* Pulse animation */
@@ -120,11 +339,118 @@ html, body {
   animation: pulseGlow 2.4s ease-in-out infinite;
 }
 
+/* -------------------------------------------------------------
+ * Iridescent Metallic Lighting Effect (Outer Perimeter Only)
+ * Precision 1.25px metallic rim with anisotropic prismatic dispersion
+ * and specular hotspots, leaving the interior 100% clean and near-black.
+ * ------------------------------------------------------------- */
+.island-iridescent-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 10;
+  /* Docked perimeter mask: top edge flush at 0, 1.25px on left, bottom, right */
+  padding: 0 1.25px 1.25px 1.25px;
+  background:
+    /* Primary Specular Hotspot 1: White core + rainbow dispersion (right curve) */
+    radial-gradient(
+      circle 60px at var(--h1-pos, calc(100% - 14px) 20px),
+      #FFFFFF 0%,
+      #FFFFFF 8%,
+      #FFF1A8 15%,
+      #FFA834 24%,
+      #FF4834 35%,
+      #E62480 47%,
+      #8630FF 58%,
+      #007BFF 70%,
+      #00E5FF 82%,
+      #00FFA3 91%,
+      transparent 100%
+    ),
+    /* Secondary Specular Hotspot 2: Cyan-white core + electric blue/violet dispersion (bottom-left curve) */
+    radial-gradient(
+      circle 54px at var(--h2-pos, 16px calc(100% - 10px)),
+      #FFFFFF 0%,
+      #D9F8FF 12%,
+      #00F0FF 25%,
+      #0088FF 42%,
+      #7433FF 58%,
+      #D936B0 74%,
+      #FFA52E 88%,
+      transparent 100%
+    ),
+    /* Subtle tertiary ambient glint */
+    radial-gradient(
+      circle 40px at var(--h3-pos, 65% 100%),
+      rgba(255, 210, 100, 0.45) 0%,
+      rgba(255, 80, 50, 0.3) 40%,
+      rgba(130, 40, 255, 0.2) 70%,
+      transparent 100%
+    ),
+    /* Base polished dark titanium metallic rim */
+    linear-gradient(
+      140deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(45, 55, 68, 0.65) 25%,
+      rgba(18, 24, 30, 0.75) 50%,
+      rgba(35, 45, 55, 0.6) 75%,
+      rgba(255, 255, 255, 0.16) 100%
+    );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box exclude,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: metallicShimmer 14s ease-in-out infinite alternate;
+  --h1-pos: calc(100% - 14px) 18px;
+  --h2-pos: 16px calc(100% - 8px);
+  --h3-pos: 62% 100%;
+}
+
+.island-iridescent-rim.expanded {
+  --h1-pos: calc(100% - 24px) 40px;
+  --h2-pos: 24px calc(100% - 24px);
+  --h3-pos: 70% 100%;
+}
+
+/* Inner chamfer depth separator */
+.island-inner-bevel {
+  position: absolute;
+  inset: 0 1px 1px 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 9;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.75);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@keyframes metallicShimmer {
+  0% {
+    opacity: 0.94;
+    filter: brightness(0.98);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.08);
+  }
+  100% {
+    opacity: 0.92;
+    filter: brightness(0.96);
+  }
+}
+
 /* Respect user's reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+  .island-iridescent-rim {
+    animation: none !important;
   }
 }

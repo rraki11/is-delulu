@@ -185,7 +185,7 @@ const MediaSourceCard: React.FC<MediaSourceCardProps> = ({ source, onAction, isP
             {!isMediaSession && (
               <span
                 style={{
-                  fontSize: '8.5px',
+                  fontSize: '9px',
                   color: 'var(--text-muted)',
                   opacity: 0.75
                 }}
@@ -196,14 +196,17 @@ const MediaSourceCard: React.FC<MediaSourceCardProps> = ({ source, onAction, isP
           </div>
 
           <h4
+            className="font-text"
             style={{
+              fontFamily: 'var(--font-text)',
               fontSize: '13px',
-              fontWeight: 700,
+              fontWeight: 600,
               color: 'var(--text-primary)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              margin: 0
+              margin: 0,
+              letterSpacing: '-0.01em'
             }}
             title={source.title}
           >
@@ -211,14 +214,17 @@ const MediaSourceCard: React.FC<MediaSourceCardProps> = ({ source, onAction, isP
           </h4>
 
           <p
+            className="font-text"
             style={{
+              fontFamily: 'var(--font-text)',
               fontSize: '11px',
               color: 'var(--text-secondary)',
               marginTop: '1px',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              margin: 0
+              margin: 0,
+              letterSpacing: '-0.005em'
             }}
             title={source.artist}
           >
@@ -301,12 +307,15 @@ const MediaSourceCard: React.FC<MediaSourceCardProps> = ({ source, onAction, isP
             />
           </div>
           <div
+            className="tabular-nums font-display"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
+              fontFamily: 'var(--font-display)',
               fontSize: '10px',
               color: 'var(--text-muted)',
-              fontVariantNumeric: 'tabular-nums'
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '-0.01em'
             }}
           >
             <span>{formatSeconds(currentPos)}</span>

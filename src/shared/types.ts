@@ -14,11 +14,27 @@ export interface CalendarEvent {
 export type ClockFormat = '12h' | '24h'
 export type AppearanceMode = 'system' | 'light' | 'dark'
 
+export type AccentThemeMode = 'wallpaper' | 'manual' | 'default'
+
+export interface AccentPalette {
+  primary: string
+  primaryLight: string
+  secondary: string
+  highlight: string
+  glow: string
+  subtle: string
+  border: string
+  text: string
+  sourceWallpaper?: string
+}
+
 export interface UserPreferences {
   userName: string
   clockFormat: ClockFormat
   appearance: AppearanceMode
   isPinned: boolean
+  accentMode: AccentThemeMode
+  manualAccentColor: string
 }
 
 export interface SystemStats {
@@ -234,6 +250,10 @@ export interface IsDeluluAPI {
   onPreferencesChanged: (callback: (prefs: UserPreferences) => void) => () => void
   getResolvedTheme: () => Promise<'light' | 'dark'>
   onThemeChanged: (callback: (theme: 'light' | 'dark') => void) => () => void
+
+  // Dynamic Wallpaper & Accent Theme
+  getAccentPalette: () => Promise<AccentPalette>
+  onAccentPaletteChanged: (callback: (palette: AccentPalette) => void) => () => void
 
   // Diagnostics & Debug
   toggleForceVisibleDebug: () => Promise<boolean>

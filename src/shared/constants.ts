@@ -12,12 +12,12 @@ export const WINDOW_CONFIG = {
     height: 560
   },
   pill: {
-    width: 184,
-    height: 32
+    width: 190,
+    height: 33
   },
   panel: {
     width: 520,
-    height: 520
+    height: 536
   },
   topOffset: 0
 } as const

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { MorphingIsland } from './components/island/MorphingIsland'
 import { useIslandStore } from './store/useIslandStore'
 import { useIslandStateMachine } from './hooks/useIslandStateMachine'
-import { IslandMode } from '../../shared/types'
+import { IslandMode, AccentPalette } from '../../shared/types'
 
 export const App: React.FC = () => {
   const {
@@ -12,6 +12,7 @@ export const App: React.FC = () => {
     preferences,
     setPreferences,
     setTheme,
+    setAccentPalette,
     setSystemStats,
     setClipboardItems,
     setMediaState,
@@ -21,6 +22,8 @@ export const App: React.FC = () => {
   } = useIslandStore()
 
   const isIgnoringRef = useRef(true)
+  const currentThemeRef = useRef<'light' | 'dark'>('dark')
+  const currentPaletteRef = useRef<AccentPalette | null>(null)
 
   // Coordinate click-through pass-through for transparent window regions
   const updateMouseHitTest = useCallback((isInsideIsland: boolean) => {
@@ -48,6 +51,7 @@ export const App: React.FC = () => {
     expand,
     collapse,
     reveal,
+    hide,
     clearTimer
   } = useIslandStateMachine({
     initialMode: mode,
@@ -61,13 +65,51 @@ export const App: React.FC = () => {
   const currentModeRef = useRef(currentMode)
   currentModeRef.current = currentMode
 
+  // Apply accent palette CSS variables to document root
+  const applyAccentPalette = useCallback(
+    (palette: AccentPalette, themeMode: 'light' | 'dark') => {
+      setAccentPalette(palette)
+      currentPaletteRef.current = palette
+      const isLight = themeMode === 'light'
+      const primary = isLight ? palette.primaryLight : palette.primary
+      const root = document.documentElement
+      root.style.setProperty('--accent', primary)
+      root.style.setProperty('--accent-secondary', palette.secondary)
+      root.style.setProperty('--accent-highlight', palette.highlight)
+      root.style.setProperty('--accent-glow', palette.glow)
+      root.style.setProperty('--accent-subtle', palette.subtle)
+      root.style.setProperty('--accent-border', palette.border)
+      root.style.setProperty('--border-active', palette.border)
+      root.style.setProperty('--border-glass', palette.subtle)
+      root.style.setProperty('--text-accent', isLight ? primary : palette.text)
+
+      // Calculate accessible contrast for text rendered directly on --accent backgrounds
+      let lum = 0.5
+      try {
+        const clean = primary.replace('#', '').trim()
+        const fullHex = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
+        const num = parseInt(fullHex, 16)
+        const r = (num >> 16) & 255
+        const g = (num >> 8) & 255
+        const b = num & 255
+        lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+      } catch {}
+      root.style.setProperty('--text-on-accent', lum > 0.65 ? '#0A0D0E' : '#FFFFFF')
+    },
+    [setAccentPalette]
+  )
+
   // Apply theme to DOM
   const applyTheme = useCallback(
     (themeName: 'light' | 'dark') => {
+      currentThemeRef.current = themeName
       setTheme(themeName)
       document.documentElement.dataset.theme = themeName
+      if (currentPaletteRef.current) {
+        applyAccentPalette(currentPaletteRef.current, themeName)
+      }
     },
-    [setTheme]
+    [setTheme, applyAccentPalette]
   )
 
   // Initialize data, preferences, theme, and IPC event subscriptions
@@ -100,6 +142,8 @@ export const App: React.FC = () => {
         expand()
       } else if (nextMode === 'collapsed') {
         collapse()
+      } else if (nextMode === 'hidden') {
+        hide()
       }
     })
 
@@ -143,6 +187,19 @@ export const App: React.FC = () => {
         })
       : () => {}
 
+    // Load initial accent palette and subscribe to updates
+    if (window.isDelulu.getAccentPalette) {
+      window.isDelulu.getAccentPalette().then((palette) => {
+        applyAccentPalette(palette, currentThemeRef.current)
+      })
+    }
+
+    const unsubAccent = window.isDelulu.onAccentPaletteChanged
+      ? window.isDelulu.onAccentPaletteChanged((palette) => {
+          applyAccentPalette(palette, currentThemeRef.current)
+        })
+      : () => {}
+
     return () => {
       unsubSystem()
       unsubClip()
@@ -153,6 +210,7 @@ export const App: React.FC = () => {
       unsubDebug()
       unsubPrefs()
       unsubTheme()
+      unsubAccent()
       clearTimer()
     }
   }, [
@@ -192,9 +250,21 @@ export const App: React.FC = () => {
       }
     }
 
+    const handleWindowMouseLeave = (): void => {
+      handlePointerLeave()
+    }
+
+    const handleWindowBlur = (): void => {
+      handlePointerLeave()
+    }
+
     window.addEventListener('mousemove', handleGlobalMouseMove, { passive: true })
+    window.addEventListener('mouseleave', handleWindowMouseLeave)
+    window.addEventListener('blur', handleWindowBlur)
     return () => {
       window.removeEventListener('mousemove', handleGlobalMouseMove)
+      window.removeEventListener('mouseleave', handleWindowMouseLeave)
+      window.removeEventListener('blur', handleWindowBlur)
     }
   }, [currentMode, handlePointerEnter, handlePointerLeave])
 
@@ -225,9 +295,7 @@ export const App: React.FC = () => {
         position: 'relative',
         width: '100%',
         height: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
+        overflow: 'hidden',
         background: 'transparent',
         pointerEvents: 'none'
       }}

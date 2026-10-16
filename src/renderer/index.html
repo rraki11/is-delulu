@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self' http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:*;"
+      content="default-src 'self' http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; img-src 'self' data: https:; font-src 'self' data: http://localhost:*; connect-src 'self' http://localhost:* ws://localhost:*;"
     />
+    <link rel="preload" href="/src/assets/fonts/SFPRODISPLAYREGULAR.OTF" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="/src/assets/fonts/SFPRODISPLAYMEDIUM.OTF" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="/src/assets/fonts/SFPRODISPLAYBOLD.OTF" as="font" type="font/otf" crossorigin />
     <title>is-delulu</title>
     <style>
       html, body, #root {

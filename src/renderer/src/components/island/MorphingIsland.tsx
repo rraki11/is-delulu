@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import {
-  ChevronDown,
-  Search,
-  Calendar,
-  Cpu,
-  ClipboardList,
-  Music,
-  Sparkles,
-  Settings
-} from 'lucide-react'
 import { IslandHeader } from './IslandHeader'
+import { NavigationTabBar } from './NavigationTabBar'
 import { CommandSearch } from '../launcher/CommandSearch'
 import { ShortcutGrid } from '../launcher/ShortcutGrid'
 import { CalendarWidget } from '../widgets/CalendarWidget'
@@ -20,7 +11,7 @@ import { MediaWidget } from '../widgets/MediaWidget'
 import { RoutinesWidget } from '../widgets/RoutinesWidget'
 import { SettingsWidget } from '../settings/SettingsWidget'
 import { useIslandStore } from '../../store/useIslandStore'
-import { ExpandedTab, IslandMode } from '../../shared'
+import { IslandMode, WINDOW_CONFIG } from '../../shared'
 
 interface MorphingIslandProps {
   mode: IslandMode
@@ -30,16 +21,6 @@ interface MorphingIslandProps {
   onPointerLeave?: () => void
 }
 
-const TABS: { id: ExpandedTab; label: string; icon: React.ElementType }[] = [
-  { id: 'launcher', label: 'Launcher', icon: Search },
-  { id: 'calendar', label: 'Calendar', icon: Calendar },
-  { id: 'system', label: 'System', icon: Cpu },
-  { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
-  { id: 'media', label: 'Media', icon: Music },
-  { id: 'routines', label: 'Routines', icon: Sparkles },
-  { id: 'settings', label: 'Settings', icon: Settings }
-]
-
 export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   mode,
   onExpand,
@@ -47,7 +28,10 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   onPointerEnter,
   onPointerLeave
 }) => {
-  const { preferences, activeTab, setActiveTab, setStatusMessage } = useIslandStore()
+  const preferences = useIslandStore((s) => s.preferences)
+  const activeTab = useIslandStore((s) => s.activeTab)
+  const setActiveTab = useIslandStore((s) => s.setActiveTab)
+  const setStatusMessage = useIslandStore((s) => s.setStatusMessage)
   const [time, setTime] = useState<string>('')
 
   useEffect(() => {
@@ -88,6 +72,21 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const isExpanded = mode === 'expanded'
   const isHidden = mode === 'hidden'
 
+  const [windowWidth, setWindowWidth] = useState<number>(
+    typeof window !== 'undefined' ? window.innerWidth : 540
+  )
+
+  useEffect(() => {
+    const handleResize = (): void => {
+      setWindowWidth(window.innerWidth)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const targetWidth = isExpanded ? WINDOW_CONFIG.panel.width : WINDOW_CONFIG.pill.width
+  const integerLeft = Math.floor((windowWidth - targetWidth) / 2)
+
   return (
     <motion.div
       id="island-surface"
@@ -108,20 +107,19 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
       onPointerLeave={onPointerLeave}
       initial={false}
       animate={{
-        width: isExpanded ? 520 : 184,
-        height: isExpanded ? 536 : 32,
-        borderRadius: isExpanded ? '0px 0px 22px 22px' : '0px 0px 16px 16px',
+        left: integerLeft,
+        width: targetWidth,
+        height: isExpanded ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height,
+        borderRadius: isExpanded ? '0px 0px 22px 22px' : '0px 0px 17px 17px',
         backgroundColor: isExpanded ? 'var(--bg-panel)' : 'var(--bg-pill)',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        boxShadow: isExpanded ? 'var(--shadow-panel)' : 'var(--shadow-pill)',
-        y: isHidden ? -38 : 0,
+        boxShadow: isHidden
+          ? 'none'
+          : isExpanded
+          ? 'var(--shadow-panel)'
+          : 'var(--shadow-pill)',
+        y: isHidden ? -48 : 0,
         opacity: isHidden ? 0 : 1
       }}
-      whileHover={
-        mode === 'collapsed'
-          ? { scale: 1.035, y: 0, transition: { duration: 0.16, ease: 'easeOut' } }
-          : undefined
-      }
       whileTap={
         mode === 'collapsed'
           ? { scale: 0.98 }
@@ -129,9 +127,14 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
       }
       transition={{
         type: 'spring',
-        stiffness: 400,
-        damping: 32,
+        stiffness: 360,
+        damping: 30,
         mass: 0.8
+      }}
+      onAnimationComplete={() => {
+        if (mode === 'hidden' && window.isDelulu) {
+          window.isDelulu.setIslandMode('hidden')
+        }
       }}
       title={mode === 'collapsed' ? 'Click to expand' : undefined}
       style={{
@@ -140,10 +143,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         transformOrigin: 'top center',
         originX: 0.5,
         originY: 0,
-        borderStyle: 'solid',
-        borderWidth: '1px',
-        borderTop: 'none',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        border: 'none',
         overflow: 'hidden',
         boxSizing: 'border-box',
         display: 'flex',
@@ -156,6 +156,15 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         zIndex: 100
       }}
     >
+      {/* Precision Iridescent Metallic Rim (strictly on outer 1.25px perimeter) */}
+      <div
+        className={`island-iridescent-rim ${isExpanded ? 'expanded' : ''}`}
+        aria-hidden="true"
+      />
+
+      {/* Inner Metallic Chamfer & Depth Separator */}
+      <div className="island-inner-bevel" aria-hidden="true" />
+
       {/* Collapsed Pill Content (Minimal Digital Clock Only) */}
       {!isExpanded && (
         <motion.div
@@ -169,7 +178,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
             top: 0,
             left: 0,
             right: 0,
-            height: '32px',
+            bottom: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -181,10 +190,11 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           <span
             className="tabular-nums"
             style={{
+              fontFamily: 'var(--font-display)',
               fontSize: '12px',
-              fontWeight: 600,
+              fontWeight: 500,
               color: '#F4F5F0',
-              letterSpacing: '0.02em',
+              letterSpacing: '0',
               lineHeight: 1
             }}
           >
@@ -197,10 +207,10 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
       {isExpanded && (
         <motion.div
           key="expanded-dashboard"
-          initial={{ opacity: 0, scale: 0.96, y: 6 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 6 }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
           style={{
             width: '520px',
             height: '536px',
@@ -215,52 +225,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           <IslandHeader onCollapse={onCollapse} />
 
         {/* Navigation Tab Bar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '3px',
-            padding: '8px 14px',
-            backgroundColor: 'rgba(125, 125, 125, 0.05)',
-            borderBottom: '1px solid var(--border-subtle)',
-            flexShrink: 0
-          }}
-        >
-          {TABS.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '5px',
-                  padding: '6px 4px',
-                  borderRadius: 'var(--radius-button)',
-                  border: isActive
-                    ? '1px solid var(--border-active)'
-                    : '1px solid transparent',
-                  backgroundColor: isActive
-                    ? 'var(--accent-subtle)'
-                    : 'transparent',
-                  color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: isActive ? 600 : 500,
-                  cursor: 'pointer',
-                  transition: 'all var(--transition-fast)',
-                  outline: 'none'
-                }}
-              >
-                <Icon size={13} />
-                <span>{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
+        <NavigationTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
 
         {/* Active Tab View */}
         <div
@@ -276,10 +241,10 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.14 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
               style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
             >
               {activeTab === 'launcher' && (

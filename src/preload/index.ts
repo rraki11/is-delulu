@@ -9,7 +9,8 @@ import {
   MediaControlAction,
   DesktopRoutine,
   UserPreferences,
-  DebugStatus
+  DebugStatus,
+  AccentPalette
 } from '../shared/types'
 
 const isDeluluAPI: IsDeluluAPI = {
@@ -164,6 +165,20 @@ const isDeluluAPI: IsDeluluAPI = {
     ipcRenderer.on('theme:changed', handler)
     return () => {
       ipcRenderer.removeListener('theme:changed', handler)
+    }
+  },
+
+  // Dynamic Wallpaper & Accent Theme
+  getAccentPalette: (): Promise<AccentPalette> => {
+    return ipcRenderer.invoke('theme:get-accent-palette')
+  },
+  onAccentPaletteChanged: (callback: (palette: AccentPalette) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, palette: AccentPalette): void => {
+      callback(palette)
+    }
+    ipcRenderer.on('theme:accent-updated', handler)
+    return () => {
+      ipcRenderer.removeListener('theme:accent-updated', handler)
     }
   },
 

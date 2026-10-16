@@ -46,11 +46,13 @@ export const SystemWidget: React.FC = () => {
               </span>
             </div>
             <span
+              className="tabular-nums font-display"
               style={{
+                fontFamily: 'var(--font-display)',
                 fontSize: '12px',
                 fontWeight: 700,
                 color: 'var(--text-primary)',
-                fontVariantNumeric: 'tabular-nums'
+                letterSpacing: '-0.01em'
               }}
             >
               {cpuPercent}%
@@ -71,9 +73,9 @@ export const SystemWidget: React.FC = () => {
               style={{
                 width: `${cpuPercent}%`,
                 height: '100%',
-                background: 'linear-gradient(90deg, #8A9669 0%, #BBFF00 100%)',
+                background: 'linear-gradient(90deg, var(--accent-secondary) 0%, var(--accent) 100%)',
                 borderRadius: '9999px',
-                boxShadow: '0 0 8px rgba(187, 255, 0, 0.4)',
+                boxShadow: '0 0 8px var(--accent-glow)',
                 transition: 'width 0.4s ease'
               }}
             />
@@ -111,11 +113,13 @@ export const SystemWidget: React.FC = () => {
               </span>
             </div>
             <span
+              className="tabular-nums font-display"
               style={{
+                fontFamily: 'var(--font-display)',
                 fontSize: '12px',
                 fontWeight: 700,
                 color: 'var(--text-primary)',
-                fontVariantNumeric: 'tabular-nums'
+                letterSpacing: '-0.01em'
               }}
             >
               {memPercent}%
@@ -136,9 +140,9 @@ export const SystemWidget: React.FC = () => {
               style={{
                 width: `${memPercent}%`,
                 height: '100%',
-                background: 'linear-gradient(90deg, #8A9669 0%, #BBFF00 100%)',
+                background: 'linear-gradient(90deg, var(--accent-secondary) 0%, var(--accent) 100%)',
                 borderRadius: '9999px',
-                boxShadow: '0 0 8px rgba(187, 255, 0, 0.4)',
+                boxShadow: '0 0 8px var(--accent-glow)',
                 transition: 'width 0.4s ease'
               }}
             />
@@ -190,8 +194,8 @@ export const SystemWidget: React.FC = () => {
           justifyContent: 'center',
           gap: '8px',
           padding: '10px',
-          backgroundColor: 'rgba(187, 255, 0, 0.08)',
-          border: '1px solid rgba(187, 255, 0, 0.2)',
+          backgroundColor: 'var(--accent-subtle)',
+          border: '1px solid var(--accent-border)',
           borderRadius: 'var(--radius-button)',
           color: 'var(--accent)',
           fontSize: '12px',

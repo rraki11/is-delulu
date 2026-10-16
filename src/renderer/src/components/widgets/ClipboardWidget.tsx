@@ -71,7 +71,9 @@ export const ClipboardWidget: React.FC = () => {
               border: 'none',
               outline: 'none',
               color: 'var(--text-primary)',
-              fontSize: '12px'
+              fontFamily: 'var(--font-text)',
+              fontSize: '12px',
+              letterSpacing: '-0.005em'
             }}
           />
         </div>
@@ -126,7 +128,7 @@ export const ClipboardWidget: React.FC = () => {
                   padding: '10px 12px',
                   backgroundColor: 'rgba(18, 21, 21, 0.72)',
                   border: isJustCopied
-                    ? '1px solid rgba(187, 255, 0, 0.4)'
+                    ? '1px solid var(--accent-border)'
                     : '1px solid rgba(255, 255, 255, 0.06)',
                   borderRadius: 'var(--radius-card)',
                   cursor: 'pointer',
@@ -168,7 +170,8 @@ export const ClipboardWidget: React.FC = () => {
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      fontFamily: item.type === 'code' ? 'monospace' : 'inherit'
+                      fontFamily: item.type === 'code' ? 'var(--font-mono)' : 'var(--font-text)',
+                      letterSpacing: item.type === 'code' ? 'normal' : '-0.003em'
                     }}
                   >
                     {item.preview}
@@ -180,7 +183,7 @@ export const ClipboardWidget: React.FC = () => {
                     padding: '6px',
                     borderRadius: '6px',
                     backgroundColor: isJustCopied
-                      ? 'rgba(187, 255, 0, 0.15)'
+                      ? 'var(--accent-glow)'
                       : 'rgba(255, 255, 255, 0.04)',
                     color: isJustCopied ? 'var(--accent)' : 'var(--text-secondary)'
                   }}

@@ -7,7 +7,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   userName: '',
   clockFormat: '12h',
   appearance: 'system',
-  isPinned: false
+  isPinned: false,
+  accentMode: 'wallpaper',
+  manualAccentColor: '#8B5CF6'
 }
 
 let cachedPreferences: UserPreferences = { ...DEFAULT_PREFERENCES }
@@ -29,7 +31,13 @@ export function initPreferences(): UserPreferences {
         appearance: (parsed.appearance === 'light' || parsed.appearance === 'dark' || parsed.appearance === 'system')
           ? parsed.appearance
           : 'system',
-        isPinned: Boolean(parsed.isPinned)
+        isPinned: Boolean(parsed.isPinned),
+        accentMode: (parsed.accentMode === 'wallpaper' || parsed.accentMode === 'manual' || parsed.accentMode === 'default')
+          ? parsed.accentMode
+          : 'wallpaper',
+        manualAccentColor: typeof parsed.manualAccentColor === 'string' && /^#[0-9A-Fa-f]{3,8}$/.test(parsed.manualAccentColor)
+          ? parsed.manualAccentColor
+          : '#8B5CF6'
       }
     } else {
       savePreferencesToDisk(DEFAULT_PREFERENCES)
@@ -76,6 +84,19 @@ export function updatePreferences(partial: Partial<UserPreferences>): UserPrefer
     cachedPreferences.appearance = 'system'
   }
   cachedPreferences.isPinned = Boolean(cachedPreferences.isPinned)
+  if (
+    cachedPreferences.accentMode !== 'wallpaper' &&
+    cachedPreferences.accentMode !== 'manual' &&
+    cachedPreferences.accentMode !== 'default'
+  ) {
+    cachedPreferences.accentMode = 'wallpaper'
+  }
+  if (
+    typeof cachedPreferences.manualAccentColor !== 'string' ||
+    !/^#[0-9A-Fa-f]{3,8}$/.test(cachedPreferences.manualAccentColor)
+  ) {
+    cachedPreferences.manualAccentColor = '#8B5CF6'
+  }
 
   savePreferencesToDisk(cachedPreferences)
 

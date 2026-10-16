@@ -358,6 +358,7 @@ export const CalendarWidget: React.FC = () => {
             }}
           >
             <span
+              className="font-display"
               style={{
                 fontSize: '17px',
                 fontWeight: 600,
@@ -504,6 +505,7 @@ export const CalendarWidget: React.FC = () => {
                   }}
                 >
                   <span
+                    className="tabular-nums font-display"
                     style={{
                       fontSize: '15px',
                       fontWeight: isSelected ? 700 : isCurrentMonth ? 500 : 400,

@@ -49,30 +49,7 @@ export function useIslandStateMachine({
     }
   }, [])
 
-  // Check if DOM state permits auto-hiding
-  const checkCanHide = useCallback((): boolean => {
-    if (isPinnedRef.current) return false
-    if (isHoveredRef.current) return false
-
-    // Active input or contenteditable
-    const active = document.activeElement
-    if (
-      active &&
-      (active.tagName === 'INPUT' ||
-        active.tagName === 'TEXTAREA' ||
-        active.getAttribute('contenteditable') === 'true')
-    ) {
-      return false
-    }
-
-    // Active text selection
-    const selection = window.getSelection()?.toString() || ''
-    if (selection.trim().length > 0) return false
-
-    return true
-  }, [])
-
-  // Sync mode with parent/window
+  // Transition to a state and notify parent and native window
   const transitionTo = useCallback(
     (nextState: IslandState) => {
       clearTimer()
@@ -91,7 +68,12 @@ export function useIslandStateMachine({
       }
 
       if (window.isDelulu) {
-        window.isDelulu.setIslandMode(mode)
+        // When transitioning to HIDDEN, allow MorphingIsland to execute its smooth
+        // slide-up collapse animation into the top border. MorphingIsland calls
+        // setIslandMode('hidden') on animation complete.
+        if (mode !== 'hidden') {
+          window.isDelulu.setIslandMode(mode)
+        }
       }
 
       if (updateMouseHitTestRef.current) {
@@ -115,7 +97,7 @@ export function useIslandStateMachine({
     }
   }, [isPinned, clearTimer, transitionTo])
 
-  // Start 1,000ms minimum visibility timer in COLLAPSED mode before hiding
+  // Step 2 of auto-hide: Keep the collapsed pill visible for at least 1,000ms before hiding
   const startMinVisibilityTimer = useCallback(() => {
     clearTimer()
     timerTypeRef.current = 'min_visibility'
@@ -124,14 +106,20 @@ export function useIslandStateMachine({
       timerRef.current = null
       timerTypeRef.current = null
 
-      if (!checkCanHide()) return
+      // Pinned or pointer is inside the pill: stay visible!
+      if (isPinnedRef.current || isHoveredRef.current) return
+
       if (stateRef.current === 'COLLAPSED') {
+        // Blur any lingering active element
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
         transitionTo('HIDDEN')
       }
     }, 1000) // Minimum 1,000 milliseconds visible
-  }, [clearTimer, checkCanHide, transitionTo])
+  }, [clearTimer, transitionTo])
 
-  // Start initial grace period when pointer leaves EXPANDED
+  // Step 1 of auto-collapse: After pointer leaves EXPANDED, start short grace period (700ms)
   const startGraceCollapseTimer = useCallback(() => {
     clearTimer()
     timerTypeRef.current = 'grace'
@@ -140,43 +128,53 @@ export function useIslandStateMachine({
       timerRef.current = null
       timerTypeRef.current = null
 
-      if (!checkCanHide()) return
+      // Pinned or pointer returned to expanded panel: stay open!
+      if (isPinnedRef.current || isHoveredRef.current) return
 
       if (stateRef.current === 'EXPANDED') {
+        // Blur any focused input (e.g. search bar) so keyboard focus does not linger
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
+
         // Step 1: Smoothly collapse into the minimal pill
         transitionTo('COLLAPSED')
-        // Step 2: Keep the collapsed pill visible for at least 1,000ms
+
+        // Step 2: Keep the collapsed pill visible for at least 1,000 milliseconds before hiding
         startMinVisibilityTimer()
       } else if (stateRef.current === 'COLLAPSED') {
         startMinVisibilityTimer()
       }
-    }, 700) // 700ms initial grace period
-  }, [clearTimer, checkCanHide, transitionTo, startMinVisibilityTimer])
+    }, 700) // 700ms grace period
+  }, [clearTimer, transitionTo, startMinVisibilityTimer])
 
-  // Pointer interactions
+  // Pointer enters the island surface
   const handlePointerEnter = useCallback(() => {
     isHoveredRef.current = true
     clearTimer()
 
-    if (updateMouseHitTest) {
-      updateMouseHitTest(true)
+    if (updateMouseHitTestRef.current) {
+      updateMouseHitTestRef.current(true)
     }
 
-    // If pointer enters during minimum visibility timer or grace period, stay visible!
+    // If pointer enters while hidden (e.g. via ceiling zone), reveal pill
     if (stateRef.current === 'HIDDEN') {
       transitionTo('COLLAPSED')
     }
-  }, [clearTimer, updateMouseHitTest, transitionTo])
+  }, [clearTimer, transitionTo])
 
+  // Pointer leaves the interactive island bounds
   const handlePointerLeave = useCallback(() => {
-    isHoveredRef.current = false
-
-    if (isPinnedRef.current || stateRef.current === 'PINNED') {
+    // If already marked unhovered and a collapse/hide timer is actively ticking, don't restart it
+    if (!isHoveredRef.current && timerRef.current) {
       return
     }
 
-    if (updateMouseHitTest) {
-      updateMouseHitTest(false)
+    isHoveredRef.current = false
+
+    // If pinned, preserve pinned behavior
+    if (isPinnedRef.current || stateRef.current === 'PINNED') {
+      return
     }
 
     if (stateRef.current === 'EXPANDED') {
@@ -184,7 +182,7 @@ export function useIslandStateMachine({
     } else if (stateRef.current === 'COLLAPSED') {
       startMinVisibilityTimer()
     }
-  }, [startGraceCollapseTimer, startMinVisibilityTimer, updateMouseHitTest])
+  }, [startGraceCollapseTimer, startMinVisibilityTimer])
 
   // Explicit user actions
   const expand = useCallback(() => {
@@ -195,6 +193,10 @@ export function useIslandStateMachine({
 
   const collapse = useCallback(() => {
     clearTimer()
+    // Blur any focused input
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
     transitionTo('COLLAPSED')
     if (!isHoveredRef.current && !isPinnedRef.current) {
       startMinVisibilityTimer()
@@ -205,12 +207,20 @@ export function useIslandStateMachine({
     clearTimer()
     if (stateRef.current === 'HIDDEN') {
       transitionTo('COLLAPSED')
-      // If revealed by ceiling hit without mouse inside pill, give it the 1s visibility
+      // If revealed without mouse inside, keep visible for at least 1,000ms
       if (!isHoveredRef.current && !isPinnedRef.current) {
         startMinVisibilityTimer()
       }
     }
   }, [clearTimer, transitionTo, startMinVisibilityTimer])
+
+  const hide = useCallback(() => {
+    clearTimer()
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    transitionTo('HIDDEN')
+  }, [clearTimer, transitionTo])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -235,6 +245,8 @@ export function useIslandStateMachine({
     expand,
     collapse,
     reveal,
+    hide,
     clearTimer
   }
 }
+
