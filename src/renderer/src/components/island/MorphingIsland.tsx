@@ -187,17 +187,8 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           zIndex: 100
         }}
       >
-        {/* Wallpaper-adaptive soft gradient fill — z-index 1, below rim/bevel */}
+        {/* Wallpaper-adaptive soft gradient fill */}
         <div className={`island-accent-fill${isExpanded ? ' expanded' : ''}`} aria-hidden="true" />
-
-        {/* Precision Iridescent Metallic Rim (strictly on outer 1.25px perimeter) */}
-        <div
-          className={`island-iridescent-rim ${isExpanded ? 'expanded' : ''}`}
-          aria-hidden="true"
-        />
-
-        {/* Inner Metallic Chamfer & Depth Separator */}
-        <div className="island-inner-bevel" aria-hidden="true" />
 
       {/* Collapsed Pill Content (Minimal Digital Clock Only) */}
       {!isExpanded && (
