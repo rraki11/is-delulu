@@ -242,7 +242,7 @@ export const CalendarWidget: React.FC = () => {
           width: '100%',
           backgroundColor: '#141519',
           backgroundImage: `
-            radial-gradient(ellipse 260px 140px at 50% 0%, rgba(139, 92, 246, 0.32) 0%, rgba(124, 58, 237, 0.12) 48%, transparent 80%),
+            radial-gradient(ellipse 260px 140px at 50% 0%, var(--accent-glow) 0%, var(--accent-subtle) 48%, transparent 80%),
             linear-gradient(180deg, #18191E 0%, #121316 100%)
           `,
           borderRadius: '28px',
@@ -274,8 +274,8 @@ export const CalendarWidget: React.FC = () => {
               width: '86px',
               height: '3.5px',
               borderRadius: '999px',
-              backgroundColor: '#8B5CF6',
-              boxShadow: '0 0 12px #8B5CF6, 0 0 24px rgba(139, 92, 246, 0.6)'
+              backgroundColor: 'var(--accent)',
+              boxShadow: '0 0 12px var(--accent), 0 0 24px var(--accent-glow)'
             }}
           />
           {/* Subtle curved notch silhouette */}
@@ -471,18 +471,18 @@ export const CalendarWidget: React.FC = () => {
                     cursor: 'pointer',
                     userSelect: 'none',
                     transition: 'all 0.16s cubic-bezier(0.16, 1, 0.3, 1)',
-                    // Vibrant glowing violet for selected date; transparent otherwise
+                    // Vibrant glowing accent for selected date; transparent otherwise
                     background: isSelected
-                      ? 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)'
+                      ? 'linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%)'
                       : isToday
-                      ? 'rgba(139, 92, 246, 0.12)'
+                      ? 'var(--accent-subtle)'
                       : 'transparent',
                     boxShadow: isSelected
-                      ? '0 0 20px rgba(139, 92, 246, 0.65), 0 3px 10px rgba(109, 40, 217, 0.45)'
+                      ? '0 0 20px var(--accent-glow), 0 3px 10px var(--accent-subtle)'
                       : 'none',
                     borderWidth: isToday && !isSelected ? '1.5px' : '0px',
                     borderStyle: isToday && !isSelected ? 'solid' : 'none',
-                    borderColor: isToday && !isSelected ? 'rgba(139, 92, 246, 0.75)' : 'transparent',
+                    borderColor: isToday && !isSelected ? 'var(--accent-border)' : 'transparent',
                     color: isSelected
                       ? '#FFFFFF'
                       : isCurrentMonth
@@ -498,7 +498,7 @@ export const CalendarWidget: React.FC = () => {
                   onMouseLeave={(e) => {
                     if (!isSelected) {
                       e.currentTarget.style.backgroundColor = isToday
-                        ? 'rgba(139, 92, 246, 0.12)'
+                        ? 'var(--accent-subtle)'
                         : 'transparent'
                       e.currentTarget.style.transform = 'scale(1)'
                     }
@@ -524,8 +524,8 @@ export const CalendarWidget: React.FC = () => {
                         width: '3.5px',
                         height: '3.5px',
                         borderRadius: '50%',
-                        backgroundColor: isSelected ? '#FFFFFF' : '#A78BFA',
-                        boxShadow: isSelected ? '0 0 4px #FFFFFF' : '0 0 6px #8B5CF6'
+                        backgroundColor: isSelected ? '#FFFFFF' : 'var(--accent-highlight)',
+                        boxShadow: isSelected ? '0 0 4px #FFFFFF' : '0 0 6px var(--accent)'
                       }}
                     />
                   )}
@@ -560,7 +560,7 @@ export const CalendarWidget: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CalendarIcon size={14} color="#A78BFA" />
+            <CalendarIcon size={14} color="var(--accent-highlight)" />
             <span
               style={{
                 fontSize: '13px',
@@ -578,11 +578,11 @@ export const CalendarWidget: React.FC = () => {
                 style={{
                   fontSize: '10px',
                   fontWeight: 600,
-                  color: '#8B5CF6',
-                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                  color: 'var(--accent)',
+                  backgroundColor: 'var(--accent-subtle)',
                   padding: '3px 8px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(139, 92, 246, 0.3)'
+                  border: '1px solid var(--accent-border)'
                 }}
               >
                 Today
@@ -603,7 +603,7 @@ export const CalendarWidget: React.FC = () => {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = '#FFFFFF'
-                  e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.2)'
+                  e.currentTarget.style.backgroundColor = 'var(--accent-subtle)'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = '#A1A1AA'
@@ -658,7 +658,7 @@ export const CalendarWidget: React.FC = () => {
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: evt.completed ? '#8B5CF6' : '#71717A',
+                      color: evt.completed ? 'var(--accent)' : '#71717A',
                       cursor: 'pointer',
                       padding: 0,
                       display: 'flex',
@@ -687,7 +687,7 @@ export const CalendarWidget: React.FC = () => {
                       <span
                         style={{
                           fontSize: '10px',
-                          color: '#A78BFA',
+                          color: 'var(--accent-highlight)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '4px'
@@ -754,7 +754,7 @@ export const CalendarWidget: React.FC = () => {
               transition: 'border-color 0.15s ease'
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.6)'
+              e.currentTarget.style.borderColor = 'var(--accent-border)'
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'
@@ -783,7 +783,7 @@ export const CalendarWidget: React.FC = () => {
             disabled={!newEventTitle.trim()}
             title="Add event"
             style={{
-              backgroundColor: newEventTitle.trim() ? '#8B5CF6' : 'rgba(255, 255, 255, 0.05)',
+              backgroundColor: newEventTitle.trim() ? 'var(--accent)' : 'rgba(255, 255, 255, 0.05)',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: '8px',
