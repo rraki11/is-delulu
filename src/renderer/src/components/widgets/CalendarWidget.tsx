@@ -241,10 +241,7 @@ export const CalendarWidget: React.FC = () => {
           position: 'relative',
           width: '100%',
           backgroundColor: '#141519',
-          backgroundImage: `
-            radial-gradient(ellipse 260px 140px at 50% 0%, var(--accent-glow) 0%, var(--accent-subtle) 48%, transparent 80%),
-            linear-gradient(180deg, #18191E 0%, #121316 100%)
-          `,
+          backgroundImage: 'linear-gradient(180deg, #18191E 0%, #121316 100%)',
           borderRadius: '28px',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           boxShadow: '0 20px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
@@ -255,6 +252,9 @@ export const CalendarWidget: React.FC = () => {
           overflow: 'hidden'
         }}
       >
+        {/* Animated accent gradient orbs — drift behind all content */}
+        <div className="cal-accent-orb" />
+
         {/* Top Notch Accent Glow & Horizontal Neon Bar */}
         <div
           style={{
