@@ -250,6 +250,15 @@ const isDeluluAPI: IsDeluluAPI = {
   markWelcomeShown: (): Promise<void> => {
     return ipcRenderer.invoke('island:mark-welcome-shown')
   },
+  onStartWelcome: (callback: () => void): (() => void) => {
+    const handler = (): void => {
+      callback()
+    }
+    ipcRenderer.on('island:start-welcome', handler)
+    return () => {
+      ipcRenderer.removeListener('island:start-welcome', handler)
+    }
+  },
   onLifecycleEvent: (callback: (evt: { type: 'startup' | 'resume' }) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, evt: { type: 'startup' | 'resume' }): void => {
       callback(evt)

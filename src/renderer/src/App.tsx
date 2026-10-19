@@ -58,6 +58,7 @@ export const App: React.FC = () => {
     energySaverMode,
     energySaverThreshold,
     isChargingActive,
+    isDirectHandoff,
     isNotificationActive,
     activeNotification,
     batteryState: machineBatteryState,
@@ -88,9 +89,7 @@ export const App: React.FC = () => {
 
   const handleWelcomeComplete = useCallback(() => {
     hasShownWelcomeRef.current = true
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      window.sessionStorage.setItem('is-delulu:welcome-shown', 'true')
-    }
+    console.log(`[APP ${Date.now()}] [is-delulu:renderer] handleWelcomeComplete called.`)
     completeWelcome()
   }, [completeWelcome])
 
@@ -104,11 +103,7 @@ export const App: React.FC = () => {
   welcomePhaseRef.current = welcomePhase
 
   // Track whether welcome has been shown this session (once per startup)
-  const hasShownWelcomeRef = useRef(
-    typeof window !== 'undefined' && window.sessionStorage
-      ? window.sessionStorage.getItem('is-delulu:welcome-shown') === 'true'
-      : false
-  )
+  const hasShownWelcomeRef = useRef(false)
 
   const prevChargingRef = useRef<boolean | null>(null)
   const prevEnergySaverRef = useRef<boolean | null>(null)
@@ -336,34 +331,40 @@ export const App: React.FC = () => {
 
     const unsubChargingPriority = window.isDelulu.onChargingPriority
       ? window.isDelulu.onChargingPriority(() => {
-          window.isDelulu.getBatteryState().then((state) => {
-            triggerCharging(state)
-          })
+          // Handled via battery monitor and coordinator queue
         })
       : () => {}
 
     const unsubEnergySaver = window.isDelulu.onEnergySaverChanged
       ? window.isDelulu.onEnergySaverChanged((data) => {
           console.log(
-            `[is-delulu:renderer] Received battery:energy-saver-changed event: mode=${data.mode}, threshold=${data.threshold}`
+            `[APP ${Date.now()}] [is-delulu:renderer] Received battery:energy-saver-changed event: mode=${data.mode}, threshold=${data.threshold}`
           )
           triggerEnergySaver(data.mode, data.threshold)
         })
       : () => {}
 
-    // Listen for system lifecycle events (e.g. startup, resume from sleep/hibernation)
+    // Listen for system lifecycle events (e.g. resume from sleep/hibernation)
     const unsubLifecycle = window.isDelulu.onLifecycleEvent
       ? window.isDelulu.onLifecycleEvent((evt) => {
-          console.log(`[is-delulu:renderer] Received lifecycle event: ${evt.type}`)
-          if (evt.type === 'startup' || evt.type === 'resume') {
+          console.log(`[APP ${Date.now()}] [is-delulu:renderer] Received lifecycle event: ${evt.type}`)
+          if (evt.type === 'resume') {
             hasShownWelcomeRef.current = false
-            if (typeof window !== 'undefined' && window.sessionStorage) {
-              window.sessionStorage.removeItem('is-delulu:welcome-shown')
-            }
             console.log(
-              `[is-delulu:renderer] Triggering welcome greeting sequence on ${evt.type}.`
+              `[APP ${Date.now()}] [is-delulu:renderer] Triggering welcome greeting sequence on resume.`
             )
             triggerWelcome(true)
+          }
+        })
+      : () => {}
+
+    // Listen for window-revealed welcome trigger from main process (ensures window is physically visible before animating)
+    const unsubStartWelcome = window.isDelulu.onStartWelcome
+      ? window.isDelulu.onStartWelcome(() => {
+          console.log(`[APP ${Date.now()}] [is-delulu:renderer] onStartWelcome received from main process. welcomePhase=${welcomePhaseRef.current}`)
+          if (welcomePhaseRef.current !== 'active') {
+            hasShownWelcomeRef.current = false
+            triggerWelcome(false)
           }
         })
       : () => {}
@@ -378,12 +379,17 @@ export const App: React.FC = () => {
       if (initial.isEnergySaver !== null && initial.isEnergySaver !== undefined) {
         prevEnergySaverRef.current = initial.isEnergySaver === true
       }
-      if (initial.percent !== null && initial.percent <= 30 && !isConnected) {
+      if (isConnected) {
+        console.log(
+          `[APP ${Date.now()}] [is-delulu:renderer] Startup with charger connected: queuing startup charging notification.`
+        )
+        triggerCharging(initial)
+      } else if (initial.percent !== null && initial.percent <= 30) {
         // App launches with <= 30% on battery: this is an eligible low-battery notification
         // Enqueue it to run after welcome greeting completes!
         wasLowBatteryTriggeredRef.current = true
         console.log(
-          '[is-delulu:renderer] Startup with low battery: enqueuing eligible low-battery notification.'
+          `[APP ${Date.now()}] [is-delulu:renderer] Startup with low battery: enqueuing eligible low-battery notification.`
         )
         triggerLowBattery(initial)
       }
@@ -393,17 +399,13 @@ export const App: React.FC = () => {
     // Authoritative welcome sequence initialization
     if (window.isDelulu.checkWelcome) {
       window.isDelulu.checkWelcome().then(({ shouldWelcome }) => {
-        console.log(`[is-delulu:renderer] checkWelcome response: shouldWelcome=${shouldWelcome}`)
+        console.log(`[APP ${Date.now()}] [is-delulu:renderer] checkWelcome response: shouldWelcome=${shouldWelcome}, welcomePhase=${welcomePhaseRef.current}`)
         if (shouldWelcome) {
-          hasShownWelcomeRef.current = true
-          if (typeof window !== 'undefined' && window.sessionStorage) {
-            window.sessionStorage.removeItem('is-delulu:welcome-shown')
-          }
           if (welcomePhaseRef.current !== 'active') {
             console.log(
-              '[is-delulu:renderer] Triggering welcome greeting sequence for fresh application startup.'
+              `[APP ${Date.now()}] [is-delulu:renderer] Triggering welcome greeting sequence for fresh application startup.`
             )
-            triggerWelcome(true)
+            triggerWelcome(false)
           }
         } else {
           hasShownWelcomeRef.current = true
@@ -428,6 +430,7 @@ export const App: React.FC = () => {
       : () => {}
 
     return () => {
+      unsubStartWelcome()
       unsubSystem()
       unsubClip()
       unsubMedia()
@@ -588,6 +591,7 @@ export const App: React.FC = () => {
       <ChargingPill
         phase={chargingPhase}
         batteryState={machineBatteryState}
+        isDirectHandoff={isDirectHandoff}
         onClick={() => {
           dismissCharging()
           expand()

@@ -283,6 +283,7 @@ export interface IsDeluluAPI {
   getWelcomeShown?: () => Promise<boolean>
   checkWelcome?: () => Promise<{ shouldWelcome: boolean }>
   markWelcomeShown?: () => Promise<void>
+  onStartWelcome?: (callback: () => void) => () => void
   onLifecycleEvent?: (callback: (evt: { type: 'startup' | 'resume' }) => void) => () => void
 
   // Diagnostics & Debug

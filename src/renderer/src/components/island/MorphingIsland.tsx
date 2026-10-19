@@ -101,18 +101,15 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   // Sequence: entering (520ms) -> writing (dynamic) -> holding (1000ms >= 700ms) -> fading (450ms) -> pausing (600ms) -> revealing (450ms) -> done
   type WelcomeStage = 'entering' | 'writing' | 'holding' | 'fading' | 'pausing' | 'revealing' | 'done'
   const [welcomeStage, setWelcomeStage] = useState<WelcomeStage>(() => {
-    if (welcomeActive) return 'entering'
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      const shown = window.sessionStorage.getItem('is-delulu:welcome-shown')
-      if (!shown) return 'entering'
-    }
-    return 'done'
+    return welcomeActive ? 'entering' : 'done'
   })
 
   // Synchronize welcomeStage on welcomeKey / welcomeActive prop updates during render
   const [prevWelcomeKey, setPrevWelcomeKey] = useState(welcomeKey)
-  if (welcomeKey !== prevWelcomeKey) {
+  const [prevWelcomeActive, setPrevWelcomeActive] = useState(welcomeActive)
+  if (welcomeKey !== prevWelcomeKey || welcomeActive !== prevWelcomeActive) {
     setPrevWelcomeKey(welcomeKey)
+    setPrevWelcomeActive(welcomeActive)
     if (welcomeActive) {
       setWelcomeStage('entering')
     }
@@ -152,6 +149,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
       setWelcomeStage('writing')
     } else {
       setWelcomeStage('entering')
+      console.log(`[ISLAND ${Date.now()}] Welcome entrance animation starts: sliding down from top bezel.`)
     }
 
     // Top-down entrance slide duration: 520ms
@@ -161,31 +159,37 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     const t0 = setTimeout(() => {
       if (welcomeSessionIdRef.current !== sid) return
       setWelcomeStage('writing')
+      console.log(`[ISLAND ${Date.now()}] Entrance animation completes: pill settled. Starting handwriting greeting "${chosenGreeting}".`)
 
       // 1. Handwriting animation: dynamic per greeting (2200ms for "hello" with slow finish)
       const t1 = setTimeout(() => {
         if (welcomeSessionIdRef.current !== sid) return
         setWelcomeStage('holding')
+        console.log(`[ISLAND ${Date.now()}] Greeting writing completes. Holding for user reading (1000ms).`)
 
         // 2. Readable hold pause for user to read greeting: 1,000ms (at least 700ms)
         const t2 = setTimeout(() => {
           if (welcomeSessionIdRef.current !== sid) return
           setWelcomeStage('fading')
+          console.log(`[ISLAND ${Date.now()}] Greeting fading starts (450ms).`)
 
           // 3. Smooth greeting fade-out: 450ms (~400–500ms)
           const t3 = setTimeout(() => {
             if (welcomeSessionIdRef.current !== sid) return
             setWelcomeStage('pausing')
+            console.log(`[ISLAND ${Date.now()}] Empty pill pause starts (600ms).`)
 
             // 4. Empty-pill pause after greeting completely faded: 600ms
             const t4 = setTimeout(() => {
               if (welcomeSessionIdRef.current !== sid) return
               setWelcomeStage('revealing')
+              console.log(`[ISLAND ${Date.now()}] Clock reveal starts (450ms).`)
 
               // 5. Smooth clock fade-in: 450ms
               const t5 = setTimeout(() => {
                 if (welcomeSessionIdRef.current !== sid) return
                 setWelcomeStage('done')
+                console.log(`[ISLAND ${Date.now()}] Welcome sequence complete. onWelcomeComplete() called.`)
                 onWelcomeCompleteRef.current?.()
               }, 450)
               welcomeTimersRef.current.push(t5)
@@ -442,6 +446,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
             {/* Clock: reveals smoothly only after empty-pill pause */}
             <div
               key="pill-clock-container"
+              className="island-clock-container"
               style={{
                 position: 'absolute',
                 inset: 0,

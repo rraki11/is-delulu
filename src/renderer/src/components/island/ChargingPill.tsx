@@ -7,6 +7,7 @@ interface ChargingPillProps {
   phase: ChargingPhase
   batteryState: BatteryState | null
   onClick?: () => void
+  isDirectHandoff?: boolean
 }
 
 // ── Timing & Physics ──────────────────────────────────────────────────────────
@@ -47,7 +48,8 @@ function formatMinutes(mins: number): string {
 export const ChargingPill: React.FC<ChargingPillProps> = ({
   phase,
   batteryState,
-  onClick
+  onClick,
+  isDirectHandoff = false
 }) => {
   const progressRef = useRef<HTMLDivElement>(null)
   const isVisible = phase !== 'idle'
@@ -78,14 +80,22 @@ export const ChargingPill: React.FC<ChargingPillProps> = ({
               : `Charging ${percent}%`
           }
           aria-live="polite"
-          initial={{ y: -COMPACT_H - 20, opacity: 0, scale: 0.94 }}
+          initial={
+            isDirectHandoff
+              ? { y: 0, opacity: 1, scale: 1 }
+              : { y: -COMPACT_H - 20, opacity: 0, scale: 0.94 }
+          }
           animate={{
             y: isExiting ? -COMPACT_H - 20 : 0,
             opacity: isExiting ? 0 : 1,
             scale: isExiting ? 0.94 : 1
           }}
           exit={{ y: -COMPACT_H - 20, opacity: 0, scale: 0.92 }}
-          transition={PILL_SPRING}
+          transition={
+            isDirectHandoff && !isExiting
+              ? { duration: 0.22, ease: [0.22, 1, 0.36, 1] }
+              : PILL_SPRING
+          }
           style={{
             position: 'absolute',
             top: 0,

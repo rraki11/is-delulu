@@ -75,8 +75,11 @@ export const isNotificationActiveState = (state: IslandState): boolean => {
   return getActiveNotificationType(state) !== null
 }
 
-export const isSpecialLifecycleActive = (state: IslandState): boolean => {
-  return state === 'WELCOME_ACTIVE' || isNotificationActiveState(state)
+export const isSpecialLifecycleActive = (
+  state: IslandState,
+  isClockHandoffActive = false
+): boolean => {
+  return state === 'WELCOME_ACTIVE' || isNotificationActiveState(state) || isClockHandoffActive
 }
 
 export const isChargingState = (state: IslandState): boolean => {
@@ -183,13 +186,7 @@ export function useIslandStateMachine({
   // HIDDEN | NORMAL_REVEALING | COLLAPSED | EXPANDED | CHARGING_* | ENERGY_SAVER_* | LOW_BATTERY_* | PINNED
   const [state, setState] = useState<IslandState>(() => {
     if (isPinned) return 'PINNED'
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      const shown = window.sessionStorage.getItem('is-delulu:welcome-shown')
-      if (!shown) return 'WELCOME_ACTIVE'
-    }
-    if (initialMode === 'expanded') return 'EXPANDED'
-    if (initialMode === 'collapsed') return 'COLLAPSED'
-    return 'HIDDEN'
+    return 'WELCOME_ACTIVE'
   })
 
   const stateRef = useRef<IslandState>(state)
@@ -210,9 +207,14 @@ export function useIslandStateMachine({
     | { type: 'low_battery'; target: number | BatteryState }
 
   const notificationQueueRef = useRef<QueuedNotificationItem[]>([])
-  const triggerChargingRef = useRef<(stateData: BatteryState) => void>(() => {})
+  const triggerChargingRef = useRef<(stateData: BatteryState, directHandoff?: boolean) => void>(() => {})
   const triggerEnergySaverRef = useRef<(mode: 'on' | 'off', threshold?: number | null) => void>(() => {})
   const triggerLowBatteryRef = useRef<(target: number | BatteryState) => void>(() => {})
+
+  // Seamless handoff tracking for charging notifications
+  const [isDirectHandoff, setIsDirectHandoff] = useState(false)
+  const isDirectHandoffRef = useRef(false)
+  const isClockHandoffActiveRef = useRef(false)
 
   // Energy saver state
   const [energySaverMode, setEnergySaverMode] = useState<'on' | 'off'>('on')
@@ -257,7 +259,7 @@ export function useIslandStateMachine({
       }
 
       if (window.isDelulu) {
-        if (mode !== 'hidden' && !isSpecialLifecycleActive(nextState)) {
+        if (mode !== 'hidden' && !isSpecialLifecycleActive(nextState, isClockHandoffActiveRef.current)) {
           window.isDelulu.setIslandMode(mode)
         }
       }
@@ -280,7 +282,7 @@ export function useIslandStateMachine({
         if (
           isPinnedRef.current ||
           isHoveredRef.current ||
-          isSpecialLifecycleActive(stateRef.current)
+          isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)
         )
           return
 
@@ -303,7 +305,12 @@ export function useIslandStateMachine({
     clearHoverTimers()
 
     hoverTimerRef.current = setTimeout(() => {
-      if (isPinnedRef.current || isHoveredRef.current || isSpecialLifecycleActive(stateRef.current)) return
+      if (
+        isPinnedRef.current ||
+        isHoveredRef.current ||
+        isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)
+      )
+        return
 
       transitionTo('COLLAPSED')
       startMinVisibilityTimer()
@@ -313,7 +320,7 @@ export function useIslandStateMachine({
   // Top-edge hover reveal
   const reveal = useCallback(() => {
     if (isPinnedRef.current || stateRef.current === 'PINNED') return
-    if (isSpecialLifecycleActive(stateRef.current)) return
+    if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
 
     clearHoverTimers()
 
@@ -337,7 +344,7 @@ export function useIslandStateMachine({
 
   // Pointer events on the island surface
   const handlePointerEnter = useCallback(() => {
-    if (isSpecialLifecycleActive(stateRef.current)) return
+    if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
     isHoveredRef.current = true
     clearHoverTimers()
 
@@ -352,7 +359,7 @@ export function useIslandStateMachine({
 
   const handlePointerLeave = useCallback(() => {
     isHoveredRef.current = false
-    if (isSpecialLifecycleActive(stateRef.current)) return
+    if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
     if (isPinnedRef.current || stateRef.current === 'PINNED') return
 
     if (stateRef.current === 'EXPANDED') {
@@ -364,7 +371,7 @@ export function useIslandStateMachine({
 
   // Explicit user actions
   const expand = useCallback(() => {
-    if (isSpecialLifecycleActive(stateRef.current)) return
+    if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
     clearHoverTimers()
     if (welcomeTimerRef.current) {
       clearTimeout(welcomeTimerRef.current)
@@ -375,7 +382,7 @@ export function useIslandStateMachine({
   }, [clearHoverTimers, transitionTo])
 
   const collapse = useCallback(() => {
-    if (isSpecialLifecycleActive(stateRef.current)) return
+    if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
     clearHoverTimers()
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
@@ -387,7 +394,7 @@ export function useIslandStateMachine({
   }, [clearHoverTimers, transitionTo, startMinVisibilityTimer])
 
   const hide = useCallback(() => {
-    if (isSpecialLifecycleActive(stateRef.current)) return
+    if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
     clearHoverTimers()
     clearNotificationTimers()
     if (document.activeElement instanceof HTMLElement) {
@@ -441,10 +448,11 @@ export function useIslandStateMachine({
     }
 
     console.log(`[is-delulu:coordinator] Executing queued notification: ${next.type}`)
+    const isVisibleNow = stateRef.current !== 'HIDDEN'
     // Micro-gap between notifications to prevent instantaneous snapping
     setTimeout(() => {
       if (next.type === 'charging') {
-        triggerChargingRef.current(next.state)
+        triggerChargingRef.current(next.state, isVisibleNow)
       } else if (next.type === 'energy_saver') {
         triggerEnergySaverRef.current(next.mode, next.threshold)
       } else if (next.type === 'low_battery') {
@@ -455,15 +463,17 @@ export function useIslandStateMachine({
 
   // ── 1. Priority 3: Authoritative Charging Notification Lifecycle ────────────
   const triggerCharging = useCallback(
-    (stateData: BatteryState) => {
+    (stateData: BatteryState, directHandoff = false) => {
       setBatteryState(stateData)
 
-      // If welcome animation is currently active, defer and queue!
-      if (stateRef.current === 'WELCOME_ACTIVE') {
+      // If welcome animation is currently active or clock handoff is dwelling, defer and queue!
+      if (!directHandoff && (stateRef.current === 'WELCOME_ACTIVE' || isClockHandoffActiveRef.current)) {
         console.log(
-          '[is-delulu:coordinator] Charging notification deferred: Welcome greeting is active. Enqueued at Priority 3.'
+          '[is-delulu:coordinator] Charging notification deferred: Welcome sequence / clock handoff is active. Enqueued at Priority 3.'
         )
-        enqueueNotification({ type: 'charging', state: stateData }, 'welcome_active')
+        if (!notificationQueueRef.current.some((item) => item.type === 'charging')) {
+          enqueueNotification({ type: 'charging', state: stateData }, 'welcome_active')
+        }
         return
       }
 
@@ -476,25 +486,28 @@ export function useIslandStateMachine({
         console.log(
           `[is-delulu:coordinator] Charging notification deferred: another notification is active (${stateRef.current}). Enqueued at Priority 3.`
         )
-        enqueueNotification({ type: 'charging', state: stateData }, 'notification_active')
+        if (!notificationQueueRef.current.some((item) => item.type === 'charging')) {
+          enqueueNotification({ type: 'charging', state: stateData }, 'notification_active')
+        }
         return
       }
 
-      console.log('[is-delulu:notification] Executing charging notification lifecycle.')
+      console.log(
+        `[is-delulu:notification] Executing charging notification lifecycle (directHandoff=${directHandoff}).`
+      )
       clearHoverTimers()
       clearNotificationTimers()
 
       const sid = ++notificationSessionIdRef.current
+      isDirectHandoffRef.current = directHandoff
+      setIsDirectHandoff(directHandoff)
 
       // Notify native window that charging notification has started
       window.isDelulu?.notifyNotificationStarted?.('charging') ??
         window.isDelulu?.notifyChargingStarted?.()
 
-      transitionTo('CHARGING_ENTERING')
-
-      // Entrance animation duration (380ms) -> CHARGING_COMPACT_HOLD
-      notificationTimerRef.current = setTimeout(() => {
-        if (notificationSessionIdRef.current !== sid) return
+      if (directHandoff) {
+        // Direct handoff: skip entrance drop-down since island is already visible at y: 0
         transitionTo('CHARGING_COMPACT_HOLD')
 
         // Compact hold: exactly 1,000ms delay before expanding
@@ -515,14 +528,52 @@ export function useIslandStateMachine({
               // Exit slide up into top bezel (320ms)
               notificationTimerRef.current = setTimeout(() => {
                 if (notificationSessionIdRef.current !== sid) return
+                isDirectHandoffRef.current = false
+                setIsDirectHandoff(false)
                 transitionTo('HIDDEN')
-                // Process next queued notification in priority order
+                // Process next queued notification in priority order (notifies ended when queue empty)
                 processNextQueuedNotification()
               }, 320)
             }, 1250)
           }, 2800)
         }, 1000)
-      }, 380)
+      } else {
+        transitionTo('CHARGING_ENTERING')
+
+        // Entrance animation duration (380ms) -> CHARGING_COMPACT_HOLD
+        notificationTimerRef.current = setTimeout(() => {
+          if (notificationSessionIdRef.current !== sid) return
+          transitionTo('CHARGING_COMPACT_HOLD')
+
+          // Compact hold: exactly 1,000ms delay before expanding
+          notificationTimerRef.current = setTimeout(() => {
+            if (notificationSessionIdRef.current !== sid) return
+            transitionTo('CHARGING_EXPANDED')
+
+            // Expanded display duration (2,800ms)
+            notificationTimerRef.current = setTimeout(() => {
+              if (notificationSessionIdRef.current !== sid) return
+              transitionTo('CHARGING_COLLAPSING')
+
+              // Collapse animation (300ms) + compact settled visibility (950ms)
+              notificationTimerRef.current = setTimeout(() => {
+                if (notificationSessionIdRef.current !== sid) return
+                transitionTo('CHARGING_EXITING')
+
+                // Exit slide up into top bezel (320ms)
+                notificationTimerRef.current = setTimeout(() => {
+                  if (notificationSessionIdRef.current !== sid) return
+                  isDirectHandoffRef.current = false
+                  setIsDirectHandoff(false)
+                  transitionTo('HIDDEN')
+                  // Process next queued notification in priority order (notifies ended when queue empty)
+                  processNextQueuedNotification()
+                }, 320)
+              }, 1250)
+            }, 2800)
+          }, 1000)
+        }, 380)
+      }
     },
     [
       clearHoverTimers,
@@ -704,10 +755,11 @@ export function useIslandStateMachine({
     (force = false) => {
       // If welcome is already active, ignore duplicate trigger unless forced (e.g. system resume)
       if (stateRef.current === 'WELCOME_ACTIVE' && !force) {
+        console.log(`[STATE_MACHINE ${Date.now()}] triggerWelcome: Welcome already active, preserving running sequence.`)
         return
       }
 
-      console.log('[is-delulu:coordinator] triggerWelcome: Starting welcome greeting sequence.')
+      console.log(`[STATE_MACHINE ${Date.now()}] triggerWelcome: Starting welcome greeting sequence (force=${force}).`)
       const sid = ++welcomeSessionIdRef.current
       setWelcomeSessionId(sid)
 
@@ -725,7 +777,7 @@ export function useIslandStateMachine({
         if (welcomeSessionIdRef.current !== sid) return
         welcomeTimerRef.current = null
         if (stateRef.current === 'WELCOME_ACTIVE') {
-          console.warn('[is-delulu:coordinator] Welcome greeting fallback timeout fired.')
+          console.warn(`[STATE_MACHINE ${Date.now()}] Welcome greeting fallback timeout fired.`)
           completeWelcome()
         }
       }, 8000)
@@ -736,7 +788,7 @@ export function useIslandStateMachine({
   const completeWelcome = useCallback(() => {
     if (stateRef.current !== 'WELCOME_ACTIVE') return
     console.log(
-      '[is-delulu:coordinator] completeWelcome: Welcome greeting completed. Revealing normal live clock.'
+      `[STATE_MACHINE ${Date.now()}] [is-delulu:coordinator] completeWelcome: Welcome greeting completed. Revealing normal live clock.`
     )
     ++welcomeSessionIdRef.current
     if (welcomeTimerRef.current) {
@@ -745,32 +797,43 @@ export function useIslandStateMachine({
     }
 
     window.isDelulu?.markWelcomeShown?.()
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      window.sessionStorage.setItem('is-delulu:welcome-shown', 'true')
-    }
-
-    if (isPinnedRef.current) {
-      transitionTo('PINNED')
-    } else {
-      transitionTo('COLLAPSED')
-    }
 
     // Now inspect coordinator queue for pending power notifications
     if (notificationQueueRef.current.length > 0) {
       console.log(
-        `[is-delulu:coordinator] Welcome completed with ${notificationQueueRef.current.length} queued notification(s). Scheduling execution after clock pause.`
+        `[STATE_MACHINE ${Date.now()}] [is-delulu:coordinator] Welcome completed with ${notificationQueueRef.current.length} queued notification(s). Scheduling seamless handoff.`
       )
-      // Hold clock visible briefly (350ms) before smoothly entering the highest priority notification
+      isClockHandoffActiveRef.current = true
+      clearHoverTimers()
+      transitionTo('COLLAPSED')
+
+      // Hold clock visible for established dwell (800ms) before seamlessly transitioning to queued notification
       setTimeout(() => {
-        processNextQueuedNotification()
-      }, 350)
+        isClockHandoffActiveRef.current = false
+        const next = dequeueNextNotification()
+        if (next) {
+          console.log(`[STATE_MACHINE ${Date.now()}] [is-delulu:coordinator] Executing seamless handoff to: ${next.type}`)
+          if (next.type === 'charging') {
+            triggerChargingRef.current(next.state, true)
+          } else if (next.type === 'energy_saver') {
+            triggerEnergySaverRef.current(next.mode, next.threshold)
+          } else if (next.type === 'low_battery') {
+            triggerLowBatteryRef.current(next.target)
+          }
+        }
+      }, 800)
     } else {
-      if (!isHoveredRef.current && !isPinnedRef.current) {
-        // Keep clock visible for a relaxed 2,600ms dwell after welcome greeting before smoothly sliding back up
-        startMinVisibilityTimer(2600)
+      if (isPinnedRef.current) {
+        transitionTo('PINNED')
+      } else {
+        transitionTo('COLLAPSED')
+        if (!isHoveredRef.current) {
+          // Keep clock visible for a relaxed 2,600ms dwell after welcome greeting before smoothly sliding back up
+          startMinVisibilityTimer(2600)
+        }
       }
     }
-  }, [transitionTo, startMinVisibilityTimer, processNextQueuedNotification])
+  }, [transitionTo, startMinVisibilityTimer, dequeueNextNotification, clearHoverTimers])
 
   const dismissWelcome = useCallback(() => {
     if (stateRef.current !== 'WELCOME_ACTIVE') return
@@ -828,6 +891,7 @@ export function useIslandStateMachine({
     energySaverMode,
     energySaverThreshold,
     isChargingActive,
+    isDirectHandoff,
     isNotificationActive,
     activeNotification,
     batteryState,

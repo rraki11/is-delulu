@@ -466,7 +466,7 @@ if (!gotTheLock) {
 
   ipcMain.handle('island:check-welcome', () => {
     const hasShown = getHasShownWelcome()
-    console.log(`[is-delulu:lifecycle] island:check-welcome called. hasShown=${hasShown}`)
+    console.log(`[MAIN ${Date.now()}] [is-delulu:lifecycle] island:check-welcome called. hasShown=${hasShown}`)
     if (!hasShown) {
       showIslandWindowForWelcome()
       return { shouldWelcome: true }

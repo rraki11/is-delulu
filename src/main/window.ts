@@ -19,14 +19,17 @@ export function getHasShownWelcome(): boolean {
 
 export function markWelcomeShown(): void {
   hasShownWelcomeInSession = true
-  isWelcomeOngoing = false
-  console.log('[is-delulu:lifecycle] Welcome greeting marked completed in session.')
+  // Only mark welcome ongoing false if no charging/power notification has taken over
+  if (!isChargingNotificationActive && activeNotificationType === null) {
+    isWelcomeOngoing = false
+  }
+  console.log(`[WINDOW ${Date.now()}] [is-delulu:lifecycle] Welcome greeting marked completed in session. isWelcomeOngoing=${isWelcomeOngoing}`)
 }
 
 export function resetWelcomeShownForResume(): void {
   hasShownWelcomeInSession = false
   isWelcomeOngoing = false
-  console.log('[is-delulu:lifecycle] Welcome state reset for system resume.')
+  console.log(`[WINDOW ${Date.now()}] [is-delulu:lifecycle] Welcome state reset for system resume.`)
 }
 
 export function showIslandWindowForWelcome(): void {
@@ -39,7 +42,8 @@ export function showIslandWindowForWelcome(): void {
     mainWindow.setIgnoreMouseEvents(true, { forward: true })
   }
   mainWindow.webContents.send('island:mode-changed', 'collapsed')
-  console.log('[is-delulu:window] Native window revealed for welcome greeting sequence.')
+  mainWindow.webContents.send('island:start-welcome')
+  console.log(`[WINDOW ${Date.now()}] [is-delulu:window] Native window revealed and island:start-welcome emitted.`)
 }
 
 export function isChargingNotificationOngoing(): boolean {
@@ -285,15 +289,16 @@ export function showNotificationWindow(
   if (!mainWindow || mainWindow.isDestroyed()) return
   activeNotificationType = type
   isChargingNotificationActive = type === 'charging'
+  // Transfer from welcome ongoing to charging notification ongoing
+  isWelcomeOngoing = false
   isHoverInWindowOrZone = false
   enforceCenteredPosition('collapsed')
   if (!mainWindow.isVisible()) {
     mainWindow.showInactive()
     mainWindow.setIgnoreMouseEvents(true, { forward: true })
-    console.log(`[is-delulu:window] Native window revealed for automatic ${type} notification`)
-  }
-  if (type === 'charging') {
-    mainWindow.webContents.send('island:charging-priority', true)
+    console.log(`[WINDOW ${Date.now()}] [is-delulu:window] Native window revealed for automatic ${type} notification`)
+  } else {
+    console.log(`[WINDOW ${Date.now()}] [is-delulu:window] Native window already visible for seamless handoff to ${type} notification`)
   }
 }
 
@@ -305,9 +310,13 @@ export function showNotificationWindow(
 export function hideNotificationWindow(): void {
   activeNotificationType = null
   isChargingNotificationActive = false
+  isWelcomeOngoing = false
   if (!mainWindow || mainWindow.isDestroyed()) return
   const prefs = getPreferences()
-  if (prefs.isPinned || forceVisibleDebug) return
+  if (prefs.isPinned || forceVisibleDebug) {
+    console.log(`[WINDOW ${Date.now()}] [is-delulu:window] hideNotificationWindow skipped: pinned or forceVisible`)
+    return
+  }
 
   // Conclude notification: ensure the island is hidden and window is non-interactive
   currentMode = 'hidden'
@@ -315,7 +324,7 @@ export function hideNotificationWindow(): void {
   mainWindow.setIgnoreMouseEvents(true, { forward: true })
   mainWindow.webContents.send('island:mode-changed', 'hidden')
   mainWindow.hide()
-  console.log('[is-delulu:window] Native window hidden after notification finished')
+  console.log(`[WINDOW ${Date.now()}] [is-delulu:window] Native window hidden after notification finished`)
 }
 
 export function showChargingNotificationWindow(): void {
