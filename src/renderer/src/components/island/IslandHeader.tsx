@@ -54,6 +54,7 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
 
   return (
     <div
+      className="island-header"
       style={{
         display: 'flex',
         alignItems: 'center',

@@ -630,6 +630,8 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           >
             <IslandHeader onCollapse={onCollapse} />
 
+            <NavigationTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
+
             <div
               className="island-content-area"
               style={{
@@ -653,8 +655,6 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               {activeTab === 'routines' && <RoutinesWidget />}
               {activeTab === 'settings' && <SettingsWidget />}
             </div>
-
-            <NavigationTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
           </motion.div>
         )}
       </AnimatePresence>
