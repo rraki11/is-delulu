@@ -395,13 +395,13 @@ const MediaSourceCard: React.FC<MediaSourceCardProps> = ({
     ? [
         `radial-gradient(ellipse 100% 80% at 0% 0%,   ${palette.glow} 0%, transparent 60%)`,
         `radial-gradient(ellipse 70% 60%  at 100% 100%, ${palette.subtle} 0%, transparent 65%)`,
-        'rgba(14, 18, 19, 0.78)'
+        'var(--bg-card)'
       ].join(', ')
-    : 'rgba(255,255,255,0.025)'
+    : 'var(--bg-card)'
 
   const cardBorder = isPlaying
-    ? `1px solid ${palette.primary}28`
-    : `1px solid rgba(255,255,255,0.07)`
+    ? '1px solid var(--accent-border)'
+    : '1px solid var(--border-subtle)'
 
   return (
     <div

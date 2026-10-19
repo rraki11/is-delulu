@@ -83,12 +83,12 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
           gap: '10px',
           padding: '8px 14px',
           backgroundColor: 'var(--bg-input)',
-          border: '1px solid var(--accent-border)',
+          border: '1px solid var(--border-input)',
           borderRadius: 'var(--radius-button)',
-          boxShadow: '0 0 16px -4px var(--accent-glow)'
+          boxShadow: 'var(--shadow-input)'
         }}
       >
-        <Search size={16} color="var(--accent)" />
+        <Search size={16} color="var(--search-icon-color)" />
         <input
           ref={inputRef}
           type="text"
@@ -137,7 +137,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
               lineHeight: '12px',
               fontFamily: 'var(--font-text)',
               color: 'var(--text-muted)',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              backgroundColor: 'var(--icon-container-bg)',
               padding: '2px 6px',
               borderRadius: '4px',
               letterSpacing: '0.02em'
@@ -189,9 +189,9 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                   justifyContent: 'space-between',
                   padding: '8px 12px',
                   borderRadius: '10px',
-                  backgroundColor: isSelected ? 'var(--accent-subtle)' : 'transparent',
+                  backgroundColor: isSelected ? 'var(--search-item-selected-bg)' : 'transparent',
                   border: isSelected
-                    ? '1px solid var(--accent-border)'
+                    ? '1px solid var(--search-item-selected-border)'
                     : '1px solid transparent',
                   cursor: 'pointer',
                   transition: 'background var(--transition-fast)'
@@ -205,7 +205,8 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                       borderRadius: '8px',
                       backgroundColor: isSelected
                         ? 'var(--accent-glow)'
-                        : 'rgba(255, 255, 255, 0.05)',
+                        : 'var(--icon-container-bg)',
+                      boxShadow: isSelected ? 'none' : 'var(--icon-container-shadow)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -237,9 +238,9 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                           padding: '1px 5px',
                           borderRadius: '4px',
                           backgroundColor: item.isReal
-                            ? 'var(--accent-subtle)'
-                            : 'rgba(255, 255, 255, 0.06)',
-                          color: item.isReal ? 'var(--accent)' : 'var(--text-muted)',
+                            ? 'var(--badge-bg)'
+                            : 'var(--badge-mock-bg)',
+                          color: item.isReal ? 'var(--badge-text)' : 'var(--badge-mock-text)',
                           fontFamily: 'var(--font-text)'
                         }}
                       >

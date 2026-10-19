@@ -71,10 +71,10 @@ export const RoutinesWidget: React.FC = () => {
                 cursor: 'pointer',
                 borderColor: routine.isActive
                   ? 'var(--accent-border)'
-                  : 'rgba(255, 255, 255, 0.07)',
+                  : 'var(--border-subtle)',
                 backgroundColor: routine.isActive
                   ? 'var(--accent-subtle)'
-                  : 'rgba(18, 21, 21, 0.72)'
+                  : 'var(--bg-card)'
               }}
             >
               <div

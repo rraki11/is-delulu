@@ -612,8 +612,8 @@ html, body {
 .island-gradient-stage.expanded .island-grad-orb--secondary { opacity: 0.55; }
 .island-gradient-stage.expanded .island-grad-orb--highlight { opacity: 0.42; }
 
-/* Center-darkening veil on expanded panel for text readability */
-.island-gradient-stage.expanded::after {
+/* Center-darkening veil on expanded panel for dark theme text readability */
+[data-theme="dark"] .island-gradient-stage.expanded::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -623,6 +623,69 @@ html, body {
     transparent         100%
   );
   pointer-events: none;
+}
+
+/* Luminous soft white diffusion on expanded panel for light theme pastel clarity */
+[data-theme="light"] .island-gradient-stage.expanded::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 70% 65% at 50% 45%,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.15) 60%,
+    transparent         100%
+  );
+  pointer-events: none;
+}
+
+/* Light theme pastel orb overrides */
+[data-theme="light"] .island-grad-orb--primary {
+  background: radial-gradient(
+    ellipse at center,
+    var(--accent-glow) 0%,
+    rgba(167, 139, 250, 0.08) 40%,
+    transparent 70%
+  );
+  opacity: 0.90;
+}
+
+[data-theme="light"] .island-grad-orb--secondary {
+  background: radial-gradient(
+    ellipse at center,
+    var(--accent-secondary-glow) 0%,
+    rgba(56, 189, 248, 0.08) 40%,
+    transparent 70%
+  );
+  opacity: 0.85;
+}
+
+[data-theme="light"] .island-grad-orb--highlight {
+  background: radial-gradient(
+    ellipse at center,
+    var(--accent-highlight-glow) 0%,
+    rgba(251, 146, 60, 0.06) 40%,
+    transparent 70%
+  );
+  opacity: 0.75;
+}
+
+[data-theme="light"] .island-gradient-stage.expanded .island-grad-orb--primary   { opacity: 0.85; }
+[data-theme="light"] .island-gradient-stage.expanded .island-grad-orb--secondary { opacity: 0.75; }
+[data-theme="light"] .island-gradient-stage.expanded .island-grad-orb--highlight { opacity: 0.65; }
+
+/* Island surface frosted glass blur */
+#island-surface {
+  backdrop-filter: blur(36px) saturate(180%);
+  -webkit-backdrop-filter: blur(36px) saturate(180%);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
 }
 
 /* Respect user's reduced motion preference */

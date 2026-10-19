@@ -57,8 +57,9 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
           <motion.div
             key={item.id}
             whileHover={{
-              backgroundColor: 'rgba(25, 30, 31, 0.95)',
-              borderColor: 'var(--accent-border)'
+              backgroundColor: 'var(--bg-card-hover)',
+              borderColor: 'var(--accent-border)',
+              y: -1
             }}
             whileTap={{ scale: 0.97 }}
             onClick={() => onLaunch(item.id, item.target)}
@@ -68,12 +69,13 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
               alignItems: 'center',
               justifyContent: 'center',
               padding: '10px 6px',
-              backgroundColor: 'rgba(18, 21, 21, 0.75)',
-              border: '1px solid rgba(255, 255, 255, 0.07)',
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-card)',
+              boxShadow: 'var(--shadow-card)',
               cursor: 'pointer',
               gap: '6px',
-              transition: 'background var(--transition-fast), border-color var(--transition-fast)'
+              transition: 'background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast)'
             }}
           >
             <div
@@ -81,7 +83,8 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
                 width: '32px',
                 height: '32px',
                 borderRadius: '9999px',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                backgroundColor: 'var(--icon-container-bg)',
+                boxShadow: 'var(--icon-container-shadow)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -117,10 +120,10 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
                 lineHeight: '12px',
                 letterSpacing: '0.02em',
                 fontFamily: 'var(--font-text)',
-                color: item.isInstalledMock ? 'var(--text-muted)' : 'var(--accent)',
+                color: item.isInstalledMock ? 'var(--badge-mock-text)' : 'var(--badge-text)',
                 backgroundColor: item.isInstalledMock
-                  ? 'rgba(255, 255, 255, 0.04)'
-                  : 'var(--accent-subtle)',
+                  ? 'var(--badge-mock-bg)'
+                  : 'var(--badge-bg)',
                 padding: '1px 5px',
                 borderRadius: '4px'
               }}

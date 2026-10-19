@@ -101,7 +101,7 @@ function toHex(r: number, g: number, b: number): string {
 export function getDefaultAccentPalette(): AccentPalette {
   return {
     primary: '#BBFF00',
-    primaryLight: '#5E8E04',
+    primaryLight: '#6366F1',
     secondary: '#8B5CF6',
     highlight: '#00F0FF',
     glow: 'rgba(187, 255, 0, 0.25)',

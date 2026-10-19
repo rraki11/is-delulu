@@ -489,8 +489,9 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           top: 0,
           transformOrigin: 'top center',
           originX: 0.5,
-          originY: 0,
-          border: 'none',
+          border: isExpanded ? '1px solid var(--border-panel)' : 'none',
+          backdropFilter: isExpanded ? 'blur(36px) saturate(180%)' : 'none',
+          WebkitBackdropFilter: isExpanded ? 'blur(36px) saturate(180%)' : 'none',
           overflow: 'hidden',
           boxSizing: 'border-box',
           display: 'flex',
@@ -506,7 +507,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
             : isExpanded
             ? 'var(--shadow-panel)'
             : 'var(--shadow-pill)',
-          transition: 'box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1)'
+          transition: 'box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1), border-color 380ms ease'
         }}
       >
         {/* Wallpaper-adaptive animated gradient — three color orbs drift independently */}

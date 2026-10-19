@@ -126,11 +126,12 @@ export const ClipboardWidget: React.FC = () => {
                 onClick={() => handleCopy(item)}
                 style={{
                   padding: '10px 12px',
-                  backgroundColor: 'rgba(18, 21, 21, 0.72)',
+                  backgroundColor: 'var(--bg-card)',
                   border: isJustCopied
                     ? '1px solid var(--accent-border)'
-                    : '1px solid rgba(255, 255, 255, 0.06)',
+                    : '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-card)',
+                  boxShadow: 'var(--shadow-card)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',

@@ -240,11 +240,10 @@ export const CalendarWidget: React.FC = () => {
         style={{
           position: 'relative',
           width: '100%',
-          backgroundColor: '#141519',
-          backgroundImage: 'linear-gradient(180deg, #18191E 0%, #121316 100%)',
+          background: 'var(--cal-card-bg)',
           borderRadius: '28px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+          border: '1px solid var(--cal-card-border)',
+          boxShadow: 'var(--cal-card-shadow)',
           padding: '16px 20px 14px',
           display: 'flex',
           flexDirection: 'column',
@@ -283,7 +282,7 @@ export const CalendarWidget: React.FC = () => {
             style={{
               width: '92px',
               height: '14px',
-              backgroundColor: 'rgba(10, 11, 14, 0.95)',
+              backgroundColor: 'var(--cal-notch-bg)',
               borderRadius: '0 0 14px 14px',
               borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
               borderLeft: '1px solid rgba(255, 255, 255, 0.05)',
@@ -312,9 +311,9 @@ export const CalendarWidget: React.FC = () => {
               width: '38px',
               height: '38px',
               borderRadius: '50%',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.09)',
-              color: '#E4E4E7',
+              backgroundColor: 'var(--cal-btn-bg)',
+              border: '1px solid var(--cal-btn-border)',
+              color: 'var(--cal-btn-color)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -362,7 +361,7 @@ export const CalendarWidget: React.FC = () => {
               style={{
                 fontSize: '17px',
                 fontWeight: 600,
-                color: '#FFFFFF',
+                color: 'var(--text-primary)',
                 letterSpacing: '-0.01em'
               }}
             >
@@ -378,9 +377,9 @@ export const CalendarWidget: React.FC = () => {
               width: '38px',
               height: '38px',
               borderRadius: '50%',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.09)',
-              color: '#E4E4E7',
+              backgroundColor: 'var(--cal-btn-bg)',
+              border: '1px solid var(--cal-btn-border)',
+              color: 'var(--cal-btn-color)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -419,7 +418,7 @@ export const CalendarWidget: React.FC = () => {
               style={{
                 fontSize: '11px',
                 fontWeight: 600,
-                color: '#71717A',
+                color: 'var(--text-muted)',
                 letterSpacing: '0.06em',
                 userSelect: 'none'
               }}
@@ -486,8 +485,8 @@ export const CalendarWidget: React.FC = () => {
                     color: isSelected
                       ? '#FFFFFF'
                       : isCurrentMonth
-                      ? '#FFFFFF'
-                      : 'rgba(255, 255, 255, 0.22)'
+                      ? 'var(--text-primary)'
+                      : 'var(--text-muted)'
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {
@@ -540,9 +539,10 @@ export const CalendarWidget: React.FC = () => {
       <div
         style={{
           width: '100%',
-          backgroundColor: 'rgba(20, 21, 25, 0.85)',
+          backgroundColor: 'var(--cal-panel-bg)',
           borderRadius: '18px',
-          border: '1px solid rgba(255, 255, 255, 0.07)',
+          border: '1px solid var(--cal-panel-border)',
+          boxShadow: 'var(--shadow-card)',
           padding: '12px 14px',
           display: 'flex',
           flexDirection: 'column',
@@ -565,7 +565,7 @@ export const CalendarWidget: React.FC = () => {
               style={{
                 fontSize: '13px',
                 fontWeight: 600,
-                color: '#FFFFFF'
+                color: 'var(--text-primary)'
               }}
             >
               {formattedSelectedHeader}
@@ -638,8 +638,8 @@ export const CalendarWidget: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '8px 12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  backgroundColor: 'var(--cal-event-bg)',
+                  border: '1px solid var(--cal-event-border)',
                   borderRadius: '10px',
                   transition: 'all 0.15s ease'
                 }}
