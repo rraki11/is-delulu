@@ -144,6 +144,8 @@ export const HandwrittenGreeting: React.FC<HandwrittenGreetingProps> = ({
 
   return (
     <svg
+      className="handwriting-reveal-svg"
+      data-greeting={greeting}
       viewBox={data.viewBox}
       aria-label={greeting}
       role="img"

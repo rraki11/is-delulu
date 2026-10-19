@@ -38,47 +38,21 @@ export interface MorphingIslandProps {
 export const WELCOME_GREETINGS = ['hi', 'hello'] as const
 export type WelcomeGreeting = (typeof WELCOME_GREETINGS)[number]
 
-const LAST_GREETING_STORAGE_KEY = 'is-delulu:last-welcome-greeting'
-let inMemoryLastGreeting: string | null = null
-
-export function pickGreeting(): string {
+export function pickRandomGreeting(): WelcomeGreeting {
   try {
-    let lastGreeting: string | null = inMemoryLastGreeting
-
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        const stored = window.localStorage.getItem(LAST_GREETING_STORAGE_KEY)
-        if (stored && (stored === 'hi' || stored === 'hello')) {
-          lastGreeting = stored
-        }
-      } catch {
-        // localStorage might be unavailable or throw in restricted environments
-      }
-    }
-
-    let nextGreeting: string
-    if (lastGreeting === 'hi') {
-      nextGreeting = 'hello'
-    } else if (lastGreeting === 'hello') {
-      nextGreeting = 'hi'
-    } else {
-      // First startup or no recorded history: fair random coin-toss between 'hi' and 'hello'
-      nextGreeting = Math.random() < 0.5 ? 'hi' : 'hello'
-    }
-
-    // Persist selected greeting for subsequent sequence alternation
-    inMemoryLastGreeting = nextGreeting
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        window.localStorage.setItem(LAST_GREETING_STORAGE_KEY, nextGreeting)
-      } catch {}
-    }
-
-    return nextGreeting
-  } catch {
+    const chosen: WelcomeGreeting = Math.random() < 0.5 ? 'hi' : 'hello'
+    console.log(
+      `[ISLAND ${Date.now()}] [is-delulu:greeting] Fair 50/50 selection picked: "${chosen}"`
+    )
+    return chosen
+  } catch (err) {
+    console.warn(`[ISLAND] Greeting selection failed with error, falling back to 'hello':`, err)
     return 'hello'
   }
 }
+
+// Backwards compatibility alias
+export const pickGreeting = pickRandomGreeting
 
 export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   mode,
@@ -105,9 +79,11 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const [time, setTime] = useState<string>('')
 
   // ── Welcome greeting animation lifecycle ────────────────────────────────
-  // Sequence: entering (520ms) -> writing (dynamic) -> holding (1000ms) -> fading (450ms) -> pausing (600ms) -> revealing (450ms) -> [clock_dwell (1000ms) -> clock_fading (380ms) -> clock_pause (220ms)] -> done
+  // Sequence: entering (520ms) -> settling (180ms) -> writing (dynamic) -> holding (1000ms) -> fading (450ms) -> pausing (600ms) -> revealing (450ms) -> [clock_dwell (1000ms) -> clock_fading (380ms) -> clock_pause (220ms)] -> done
   type WelcomeStage =
+    | 'idle'
     | 'entering'
+    | 'settling'
     | 'writing'
     | 'holding'
     | 'fading'
@@ -119,10 +95,12 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     | 'done'
 
   const [welcomeStage, setWelcomeStage] = useState<WelcomeStage>(() => {
-    return welcomeActive ? 'entering' : 'done'
+    return welcomeActive ? 'entering' : 'idle'
   })
 
-  // Synchronize welcomeStage on welcomeKey / welcomeActive prop updates during render
+  const [greeting, setGreeting] = useState<WelcomeGreeting>(() => pickRandomGreeting())
+
+  // Synchronize welcomeStage & greeting on welcomeKey / welcomeActive prop updates during render
   const [prevWelcomeKey, setPrevWelcomeKey] = useState(welcomeKey)
   const [prevWelcomeActive, setPrevWelcomeActive] = useState(welcomeActive)
   if (welcomeKey !== prevWelcomeKey || welcomeActive !== prevWelcomeActive) {
@@ -130,10 +108,13 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     setPrevWelcomeActive(welcomeActive)
     if (welcomeActive) {
       setWelcomeStage('entering')
+      const chosen = pickRandomGreeting()
+      setGreeting(chosen)
+    } else {
+      setWelcomeStage('done')
     }
   }
 
-  const [greeting, setGreeting] = useState<string>('hello')
   const welcomeTimersRef = React.useRef<NodeJS.Timeout[]>([])
   const welcomeSessionIdRef = React.useRef(0)
   const onWelcomeCompleteRef = React.useRef(onWelcomeComplete)
@@ -142,12 +123,20 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const hasPendingChargingRef = React.useRef(hasPendingCharging)
   hasPendingChargingRef.current = hasPendingCharging
 
+  const welcomeStageRef = React.useRef<WelcomeStage>(welcomeStage)
+  welcomeStageRef.current = welcomeStage
+  const welcomeActiveRef = React.useRef(welcomeActive)
+  welcomeActiveRef.current = welcomeActive
+  const greetingRef = React.useRef(greeting)
+  greetingRef.current = greeting
+  const entranceCompletedRef = React.useRef(false)
+
   const clearWelcomeTimers = React.useCallback(() => {
     welcomeTimersRef.current.forEach((t) => clearTimeout(t))
     welcomeTimersRef.current = []
   }, [])
 
-  // Sequenced lifecycle with relaxed pauses and smooth transitions
+  // 1. Kick off entrance slide whenever welcome becomes active
   React.useEffect(() => {
     if (!welcomeActive) {
       welcomeSessionIdRef.current++
@@ -158,116 +147,144 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
 
     const sid = ++welcomeSessionIdRef.current
     clearWelcomeTimers()
-    const chosenGreeting = pickGreeting()
-    setGreeting(chosenGreeting)
-    const writingDuration = getWritingDuration(chosenGreeting)
+    entranceCompletedRef.current = false
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     if (prefersReducedMotion) {
+      console.log(`[ISLAND ${Date.now()}] [is-delulu:entrance] Reduced motion active, skipping entrance slide.`)
+      entranceCompletedRef.current = true
       setWelcomeStage('writing')
-    } else {
-      setWelcomeStage('entering')
-      console.log(`[ISLAND ${Date.now()}] Welcome entrance animation starts: sliding down from top bezel.`)
+      return
     }
 
-    // Top-down entrance slide duration: 520ms
-    const entranceDuration = prefersReducedMotion ? 0 : 520
+    setWelcomeStage('entering')
+    console.log(
+      `[ISLAND ${Date.now()}] [is-delulu:entrance] Top-down entrance animation starts (y: -50 -> 0, opacity: 0 -> 1).`
+    )
 
-    // 0. Smooth Top-Down Island Entrance: 520ms
-    const t0 = setTimeout(() => {
+    // Safety fallback timer (580ms) if onAnimationComplete does not fire in headless or test environments
+    const safetyTimer = setTimeout(() => {
       if (welcomeSessionIdRef.current !== sid) return
-      setWelcomeStage('writing')
-      console.log(`[ISLAND ${Date.now()}] Entrance animation completes: pill settled. Starting handwriting greeting "${chosenGreeting}".`)
-
-      // 1. Handwriting animation: dynamic per greeting (2200ms for "hello" with slow finish)
-      const t1 = setTimeout(() => {
-        if (welcomeSessionIdRef.current !== sid) return
-        setWelcomeStage('holding')
-        console.log(`[ISLAND ${Date.now()}] Greeting writing completes. Holding for user reading (1000ms).`)
-
-        // 2. Readable hold pause for user to read greeting: 1,000ms
-        const t2 = setTimeout(() => {
+      if (!entranceCompletedRef.current && welcomeStageRef.current === 'entering') {
+        entranceCompletedRef.current = true
+        console.log(`[ISLAND ${Date.now()}] [is-delulu:entrance] Fallback entrance settle trigger.`)
+        setWelcomeStage('settling')
+        const tSettle = setTimeout(() => {
           if (welcomeSessionIdRef.current !== sid) return
-          setWelcomeStage('fading')
-          console.log(`[ISLAND ${Date.now()}] Greeting fading starts (450ms).`)
-
-          // 3. Smooth greeting fade-out: 450ms
-          const t3 = setTimeout(() => {
-            if (welcomeSessionIdRef.current !== sid) return
-            setWelcomeStage('pausing')
-            console.log(`[ISLAND ${Date.now()}] Empty pill pause starts (600ms).`)
-
-            // 4. Empty-pill pause after greeting completely faded: 600ms
-            const t4 = setTimeout(() => {
-              if (welcomeSessionIdRef.current !== sid) return
-              setWelcomeStage('revealing')
-              console.log(`[ISLAND ${Date.now()}] Clock reveal starts (450ms).`)
-
-              // 5. Smooth clock fade-in: 450ms
-              const t5 = setTimeout(() => {
-                if (welcomeSessionIdRef.current !== sid) return
-
-                if (hasPendingChargingRef.current) {
-                  // Laptop is on charging:
-                  // Hold clock visible for user reading (1000ms), then smoothly fade out clock, pause, and hand off to charging!
-                  setWelcomeStage('clock_dwell')
-                  console.log(
-                    `[ISLAND ${Date.now()}] Clock revealed with charging pending. Holding clock (1000ms).`
-                  )
-
-                  // 6. Clock dwell pause: 1,000ms
-                  const t6 = setTimeout(() => {
-                    if (welcomeSessionIdRef.current !== sid) return
-                    setWelcomeStage('clock_fading')
-                    console.log(`[ISLAND ${Date.now()}] Clock fading out starts (380ms).`)
-
-                    // 7. Smooth clock fade-out: 380ms
-                    const t7 = setTimeout(() => {
-                      if (welcomeSessionIdRef.current !== sid) return
-                      setWelcomeStage('clock_pause')
-                      console.log(`[ISLAND ${Date.now()}] Empty pill pause before charging animation (220ms).`)
-
-                      // 8. Empty-pill pause before charging animation: 220ms
-                      const t8 = setTimeout(() => {
-                        if (welcomeSessionIdRef.current !== sid) return
-                        setWelcomeStage('done')
-                        console.log(
-                          `[ISLAND ${Date.now()}] Clock fade sequence complete. onWelcomeComplete() called.`
-                        )
-                        onWelcomeCompleteRef.current?.()
-                      }, 220)
-                      welcomeTimersRef.current.push(t8)
-                    }, 380)
-                    welcomeTimersRef.current.push(t7)
-                  }, 1000)
-                  welcomeTimersRef.current.push(t6)
-                } else {
-                  // Not charging: clock is revealed, welcome complete!
-                  setWelcomeStage('done')
-                  console.log(`[ISLAND ${Date.now()}] Welcome sequence complete. onWelcomeComplete() called.`)
-                  onWelcomeCompleteRef.current?.()
-                }
-              }, 450)
-              welcomeTimersRef.current.push(t5)
-            }, 600)
-            welcomeTimersRef.current.push(t4)
-          }, 450)
-          welcomeTimersRef.current.push(t3)
-        }, 1000)
-        welcomeTimersRef.current.push(t2)
-      }, writingDuration)
-      welcomeTimersRef.current.push(t1)
-    }, entranceDuration)
-    welcomeTimersRef.current.push(t0)
+          console.log(
+            `[ISLAND ${Date.now()}] [is-delulu:entrance] Pill settled via fallback. Starting handwriting greeting "${greetingRef.current}".`
+          )
+          setWelcomeStage('writing')
+        }, 180)
+        welcomeTimersRef.current.push(tSettle)
+      }
+    }, 580)
+    welcomeTimersRef.current.push(safetyTimer)
 
     return () => {
       welcomeSessionIdRef.current++
       clearWelcomeTimers()
     }
   }, [welcomeActive, welcomeKey, clearWelcomeTimers])
+
+  // 2. Sequenced lifecycle: triggered once the pill has settled and welcomeStage becomes 'writing'
+  React.useEffect(() => {
+    if (welcomeStage !== 'writing') return
+
+    const sid = welcomeSessionIdRef.current
+    const chosenGreeting = greeting
+    const writingDuration = getWritingDuration(chosenGreeting)
+    console.log(
+      `[ISLAND ${Date.now()}] [is-delulu:greeting] Handwriting animation started for "${chosenGreeting}" (${writingDuration}ms).`
+    )
+
+    // 1. Handwriting animation completes
+    const tWrite = setTimeout(() => {
+      if (welcomeSessionIdRef.current !== sid) return
+      console.log(
+        `[ISLAND ${Date.now()}] [is-delulu:greeting] Greeting handwriting complete. Holding for user reading (1000ms).`
+      )
+      setWelcomeStage('holding')
+
+      // 2. Readable hold pause: 1,000ms
+      const tHold = setTimeout(() => {
+        if (welcomeSessionIdRef.current !== sid) return
+        console.log(`[ISLAND ${Date.now()}] [is-delulu:greeting] Greeting fading starts (450ms).`)
+        setWelcomeStage('fading')
+
+        // 3. Smooth greeting fade-out: 450ms
+        const tFade = setTimeout(() => {
+          if (welcomeSessionIdRef.current !== sid) return
+          console.log(`[ISLAND ${Date.now()}] [is-delulu:greeting] Empty pill pause starts (600ms).`)
+          setWelcomeStage('pausing')
+
+          // 4. Empty-pill pause after greeting completely faded: 600ms
+          const tPause = setTimeout(() => {
+            if (welcomeSessionIdRef.current !== sid) return
+            console.log(`[ISLAND ${Date.now()}] [is-delulu:clock] Clock reveal starts (450ms).`)
+            setWelcomeStage('revealing')
+
+            // 5. Smooth clock fade-in: 450ms
+            const tReveal = setTimeout(() => {
+              if (welcomeSessionIdRef.current !== sid) return
+
+              if (hasPendingChargingRef.current) {
+                // Laptop is on charging:
+                console.log(
+                  `[ISLAND ${Date.now()}] [is-delulu:clock] Clock revealed with charging pending. Holding clock (1000ms).`
+                )
+                setWelcomeStage('clock_dwell')
+
+                // 6. Clock dwell pause: 1,000ms
+                const tDwell = setTimeout(() => {
+                  if (welcomeSessionIdRef.current !== sid) return
+                  console.log(`[ISLAND ${Date.now()}] [is-delulu:clock] Clock fading out starts (380ms).`)
+                  setWelcomeStage('clock_fading')
+
+                  // 7. Smooth clock fade-out: 380ms
+                  const tClockFade = setTimeout(() => {
+                    if (welcomeSessionIdRef.current !== sid) return
+                    console.log(
+                      `[ISLAND ${Date.now()}] [is-delulu:clock] Empty pill pause before charging animation (220ms).`
+                    )
+                    setWelcomeStage('clock_pause')
+
+                    // 8. Empty-pill pause before charging animation: 220ms
+                    const tClockPause = setTimeout(() => {
+                      if (welcomeSessionIdRef.current !== sid) return
+                      console.log(
+                        `[ISLAND ${Date.now()}] [is-delulu:charging] Clock fade complete. Seamless charging handoff begins.`
+                      )
+                      setWelcomeStage('done')
+                      onWelcomeCompleteRef.current?.()
+                    }, 220)
+                    welcomeTimersRef.current.push(tClockPause)
+                  }, 380)
+                  welcomeTimersRef.current.push(tClockFade)
+                }, 1000)
+                welcomeTimersRef.current.push(tDwell)
+              } else {
+                // Not charging: clock is revealed, welcome complete!
+                console.log(
+                  `[ISLAND ${Date.now()}] [is-delulu:welcome] Sequence complete. Calling onWelcomeComplete().`
+                )
+                setWelcomeStage('done')
+                onWelcomeCompleteRef.current?.()
+              }
+            }, 450)
+            welcomeTimersRef.current.push(tReveal)
+          }, 600)
+          welcomeTimersRef.current.push(tPause)
+        }, 450)
+        welcomeTimersRef.current.push(tFade)
+      }, 1000)
+      welcomeTimersRef.current.push(tHold)
+    }, writingDuration)
+    welcomeTimersRef.current.push(tWrite)
+  }, [welcomeStage, greeting])
 
   useEffect(() => {
     if (isHidden) return
@@ -422,6 +439,25 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         }}
         transition={islandTransition}
         onAnimationComplete={() => {
+          if (welcomeActiveRef.current && welcomeStageRef.current === 'entering') {
+            if (!entranceCompletedRef.current) {
+              entranceCompletedRef.current = true
+              console.log(
+                `[ISLAND ${Date.now()}] [is-delulu:entrance] Top-down entrance animation completed (onAnimationComplete). Pill settled in position.`
+              )
+              setWelcomeStage('settling')
+              const sid = welcomeSessionIdRef.current
+              const tSettle = setTimeout(() => {
+                if (welcomeSessionIdRef.current !== sid) return
+                console.log(
+                  `[ISLAND ${Date.now()}] [is-delulu:entrance] Settling pause finished. Beginning handwriting greeting "${greetingRef.current}".`
+                )
+                setWelcomeStage('writing')
+              }, 180)
+              welcomeTimersRef.current.push(tSettle)
+            }
+          }
+
           if (mode === 'hidden' && window.isDelulu) {
             window.isDelulu.setIslandMode('hidden')
           }
@@ -495,32 +531,33 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
             }}
           >
             {/* 1. Animated Handwriting Greeting */}
-            {welcomeStage !== 'done' && !isChargingActive && (
-              <div
-                key="welcome-greeting-container"
-                className="handwriting-reveal-text-container"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 16px',
-                  boxSizing: 'border-box',
-                  opacity:
-                    welcomeStage === 'writing' || welcomeStage === 'holding' ? 1 : 0,
-                  transition:
-                    welcomeStage === 'fading' ? 'opacity 450ms ease-out' : 'none',
-                  pointerEvents: 'none'
-                }}
-              >
-                <HandwrittenGreeting
-                  greeting={greeting}
-                  isWriting={welcomeStage === 'writing'}
-                  isHolding={welcomeStage === 'holding' || welcomeStage === 'fading'}
-                />
-              </div>
-            )}
+            {(welcomeStage === 'writing' || welcomeStage === 'holding' || welcomeStage === 'fading') &&
+              !isChargingActive && (
+                <div
+                  key="welcome-greeting-container"
+                  className="handwriting-reveal-text-container"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 16px',
+                    boxSizing: 'border-box',
+                    opacity:
+                      welcomeStage === 'writing' || welcomeStage === 'holding' ? 1 : 0,
+                    transition:
+                      welcomeStage === 'fading' ? 'opacity 450ms ease-out' : 'none',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <HandwrittenGreeting
+                    greeting={greeting}
+                    isWriting={welcomeStage === 'writing'}
+                    isHolding={welcomeStage === 'holding' || welcomeStage === 'fading'}
+                  />
+                </div>
+              )}
 
             {/* 2. Clock: reveals smoothly only after empty-pill pause, fades out before charging */}
             <div

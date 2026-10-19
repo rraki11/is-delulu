@@ -361,10 +361,8 @@ export const App: React.FC = () => {
     const unsubStartWelcome = window.isDelulu.onStartWelcome
       ? window.isDelulu.onStartWelcome(() => {
           console.log(`[APP ${Date.now()}] [is-delulu:renderer] onStartWelcome received from main process. welcomePhase=${welcomePhaseRef.current}`)
-          if (welcomePhaseRef.current !== 'active') {
-            hasShownWelcomeRef.current = false
-            triggerWelcome(false)
-          }
+          hasShownWelcomeRef.current = false
+          triggerWelcome(true)
         })
       : () => {}
 
@@ -396,7 +394,7 @@ export const App: React.FC = () => {
     })
 
     // Authoritative welcome sequence initialization
-    if (window.isDelulu.checkWelcome) {
+    if (window.isDelulu && window.isDelulu.checkWelcome) {
       window.isDelulu.checkWelcome().then(({ shouldWelcome }) => {
         console.log(`[APP ${Date.now()}] [is-delulu:renderer] checkWelcome response: shouldWelcome=${shouldWelcome}, welcomePhase=${welcomePhaseRef.current}`)
         if (shouldWelcome) {
@@ -404,7 +402,7 @@ export const App: React.FC = () => {
             console.log(
               `[APP ${Date.now()}] [is-delulu:renderer] Triggering welcome greeting sequence for fresh application startup.`
             )
-            triggerWelcome(false)
+            triggerWelcome(true)
           }
         } else {
           hasShownWelcomeRef.current = true
@@ -413,6 +411,8 @@ export const App: React.FC = () => {
           }
         }
       })
+    } else if (!window.isDelulu) {
+      triggerWelcome(true)
     }
 
     // Load initial accent palette and subscribe to updates

@@ -186,7 +186,7 @@ export function useIslandStateMachine({
   // HIDDEN | NORMAL_REVEALING | COLLAPSED | EXPANDED | CHARGING_* | ENERGY_SAVER_* | LOW_BATTERY_* | PINNED
   const [state, setState] = useState<IslandState>(() => {
     if (isPinned) return 'PINNED'
-    return 'WELCOME_ACTIVE'
+    return 'HIDDEN'
   })
 
   const stateRef = useRef<IslandState>(state)
