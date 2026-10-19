@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { MorphingIsland } from './components/island/MorphingIsland'
-import { ChargingPill } from './components/island/ChargingPill'
 import { EnergySaverPill } from './components/island/EnergySaverPill'
 import { LowBatteryPill } from './components/island/LowBatteryPill'
 import { useIslandStore } from './store/useIslandStore'
@@ -479,9 +478,9 @@ export const App: React.FC = () => {
       // 1. While any notification is active, hit-test the active notification pill surface
       // to permit clicking into the dashboard, without triggering normal island hover
       if (isNotificationActiveRef.current) {
-        const notifSurface = document.querySelector(
-          '.charging-pill-surface, .energy-saver-pill-surface, .low-battery-pill-surface'
-        )
+        const notifSurface = isChargingActiveRef.current
+          ? document.getElementById('island-surface')
+          : document.querySelector('.energy-saver-pill-surface, .low-battery-pill-surface')
         if (notifSurface) {
           const rect = notifSurface.getBoundingClientRect()
           const isInside =
@@ -587,17 +586,6 @@ export const App: React.FC = () => {
         pointerEvents: 'none'
       }}
     >
-      {/* Charging notification pill — rendered at top-center */}
-      <ChargingPill
-        phase={chargingPhase}
-        batteryState={machineBatteryState}
-        isDirectHandoff={isDirectHandoff}
-        onClick={() => {
-          dismissCharging()
-          expand()
-        }}
-      />
-
       {/* Energy Saver notification pill — rendered at top-center */}
       {(activeNotification === 'energy_saver' || energySaverPhase === 'exiting') && (
         <EnergySaverPill
@@ -623,14 +611,26 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Single coherent morphing island container */}
+      {/* Single coherent morphing island container (handles collapsed clock, welcome, and charging seamlessly) */}
       <MorphingIsland
         mode={currentMode}
-        onExpand={expand}
+        onExpand={() => {
+          if (isChargingActive) {
+            dismissCharging()
+          }
+          expand()
+        }}
         onCollapse={collapse}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
         isChargingActive={isChargingActive}
+        chargingPhase={chargingPhase}
+        batteryState={machineBatteryState}
+        hasPendingCharging={
+          isChargingActive ||
+          machineBatteryState?.isOnAC === true ||
+          machineBatteryState?.isCharging === true
+        }
         isNotificationActive={isNotificationActive}
         welcomeActive={welcomePhase === 'active'}
         welcomeKey={welcomeSessionId}

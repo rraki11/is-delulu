@@ -11,20 +11,24 @@ import { MediaWidget } from '../widgets/MediaWidget'
 import { RoutinesWidget } from '../widgets/RoutinesWidget'
 import { SettingsWidget } from '../settings/SettingsWidget'
 import { useIslandStore } from '../../store/useIslandStore'
-import { IslandMode, WINDOW_CONFIG } from '../../shared'
+import { IslandMode, WINDOW_CONFIG, BatteryState } from '../../shared'
+import { ChargingPhase } from '../../hooks/useChargingNotification'
+import { ChargingContent, PILL_SPRING } from './ChargingPill'
 import {
   HandwrittenGreeting,
-  getWritingDuration,
-  HANDWRITING_DURATION_MS
+  getWritingDuration
 } from './HandwrittenGreeting'
 
-interface MorphingIslandProps {
+export interface MorphingIslandProps {
   mode: IslandMode
   onExpand: () => void
   onCollapse: () => void
   onPointerEnter?: () => void
   onPointerLeave?: () => void
   isChargingActive?: boolean
+  chargingPhase?: ChargingPhase
+  batteryState?: BatteryState | null
+  hasPendingCharging?: boolean
   isNotificationActive?: boolean
   welcomeActive?: boolean
   welcomeKey?: number
@@ -83,6 +87,9 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   onPointerEnter,
   onPointerLeave,
   isChargingActive = false,
+  chargingPhase = 'idle',
+  batteryState = null,
+  hasPendingCharging = false,
   isNotificationActive = false,
   welcomeActive = false,
   welcomeKey = 0,
@@ -98,8 +105,19 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const [time, setTime] = useState<string>('')
 
   // ── Welcome greeting animation lifecycle ────────────────────────────────
-  // Sequence: entering (520ms) -> writing (dynamic) -> holding (1000ms >= 700ms) -> fading (450ms) -> pausing (600ms) -> revealing (450ms) -> done
-  type WelcomeStage = 'entering' | 'writing' | 'holding' | 'fading' | 'pausing' | 'revealing' | 'done'
+  // Sequence: entering (520ms) -> writing (dynamic) -> holding (1000ms) -> fading (450ms) -> pausing (600ms) -> revealing (450ms) -> [clock_dwell (1000ms) -> clock_fading (380ms) -> clock_pause (220ms)] -> done
+  type WelcomeStage =
+    | 'entering'
+    | 'writing'
+    | 'holding'
+    | 'fading'
+    | 'pausing'
+    | 'revealing'
+    | 'clock_dwell'
+    | 'clock_fading'
+    | 'clock_pause'
+    | 'done'
+
   const [welcomeStage, setWelcomeStage] = useState<WelcomeStage>(() => {
     return welcomeActive ? 'entering' : 'done'
   })
@@ -120,6 +138,9 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const welcomeSessionIdRef = React.useRef(0)
   const onWelcomeCompleteRef = React.useRef(onWelcomeComplete)
   onWelcomeCompleteRef.current = onWelcomeComplete
+
+  const hasPendingChargingRef = React.useRef(hasPendingCharging)
+  hasPendingChargingRef.current = hasPendingCharging
 
   const clearWelcomeTimers = React.useCallback(() => {
     welcomeTimersRef.current.forEach((t) => clearTimeout(t))
@@ -167,13 +188,13 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         setWelcomeStage('holding')
         console.log(`[ISLAND ${Date.now()}] Greeting writing completes. Holding for user reading (1000ms).`)
 
-        // 2. Readable hold pause for user to read greeting: 1,000ms (at least 700ms)
+        // 2. Readable hold pause for user to read greeting: 1,000ms
         const t2 = setTimeout(() => {
           if (welcomeSessionIdRef.current !== sid) return
           setWelcomeStage('fading')
           console.log(`[ISLAND ${Date.now()}] Greeting fading starts (450ms).`)
 
-          // 3. Smooth greeting fade-out: 450ms (~400–500ms)
+          // 3. Smooth greeting fade-out: 450ms
           const t3 = setTimeout(() => {
             if (welcomeSessionIdRef.current !== sid) return
             setWelcomeStage('pausing')
@@ -188,9 +209,47 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               // 5. Smooth clock fade-in: 450ms
               const t5 = setTimeout(() => {
                 if (welcomeSessionIdRef.current !== sid) return
-                setWelcomeStage('done')
-                console.log(`[ISLAND ${Date.now()}] Welcome sequence complete. onWelcomeComplete() called.`)
-                onWelcomeCompleteRef.current?.()
+
+                if (hasPendingChargingRef.current) {
+                  // Laptop is on charging:
+                  // Hold clock visible for user reading (1000ms), then smoothly fade out clock, pause, and hand off to charging!
+                  setWelcomeStage('clock_dwell')
+                  console.log(
+                    `[ISLAND ${Date.now()}] Clock revealed with charging pending. Holding clock (1000ms).`
+                  )
+
+                  // 6. Clock dwell pause: 1,000ms
+                  const t6 = setTimeout(() => {
+                    if (welcomeSessionIdRef.current !== sid) return
+                    setWelcomeStage('clock_fading')
+                    console.log(`[ISLAND ${Date.now()}] Clock fading out starts (380ms).`)
+
+                    // 7. Smooth clock fade-out: 380ms
+                    const t7 = setTimeout(() => {
+                      if (welcomeSessionIdRef.current !== sid) return
+                      setWelcomeStage('clock_pause')
+                      console.log(`[ISLAND ${Date.now()}] Empty pill pause before charging animation (220ms).`)
+
+                      // 8. Empty-pill pause before charging animation: 220ms
+                      const t8 = setTimeout(() => {
+                        if (welcomeSessionIdRef.current !== sid) return
+                        setWelcomeStage('done')
+                        console.log(
+                          `[ISLAND ${Date.now()}] Clock fade sequence complete. onWelcomeComplete() called.`
+                        )
+                        onWelcomeCompleteRef.current?.()
+                      }, 220)
+                      welcomeTimersRef.current.push(t8)
+                    }, 380)
+                    welcomeTimersRef.current.push(t7)
+                  }, 1000)
+                  welcomeTimersRef.current.push(t6)
+                } else {
+                  // Not charging: clock is revealed, welcome complete!
+                  setWelcomeStage('done')
+                  console.log(`[ISLAND ${Date.now()}] Welcome sequence complete. onWelcomeComplete() called.`)
+                  onWelcomeCompleteRef.current?.()
+                }
               }, 450)
               welcomeTimersRef.current.push(t5)
             }, 600)
@@ -258,15 +317,29 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const targetWidth = isExpanded ? WINDOW_CONFIG.panel.width : WINDOW_CONFIG.pill.width
+  // ── Unified Morphology & Geometry ──────────────────────────────────────────
+  const isChargingExpanded = isChargingActive && chargingPhase === 'expanded'
+  const isChargingExiting = isChargingActive && chargingPhase === 'exiting'
+
+  const targetWidth = isExpanded
+    ? WINDOW_CONFIG.panel.width
+    : isChargingExpanded
+    ? 320
+    : WINDOW_CONFIG.pill.width
+
+  const targetHeight = isExpanded
+    ? WINDOW_CONFIG.panel.height
+    : isChargingExpanded
+    ? 42
+    : WINDOW_CONFIG.pill.height
+
   const integerLeft = Math.floor((windowWidth - targetWidth) / 2)
 
   const isEntering = welcomeActive && welcomeStage === 'entering'
-  const isHiding = isHidden
+  const isHiding = isHidden || isChargingExiting
 
-  const islandY = isHidden ? -48 : 0
-
-  const islandOpacity = isHidden || (isAnyNotificationActive && !isExpanded) ? 0 : 1
+  const islandY = isHiding ? -48 : 0
+  const islandOpacity = isHidden || isChargingExiting ? 0 : 1
 
   const islandTransition: Transition = isEntering
     ? {
@@ -275,9 +348,11 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
       }
     : isHiding
     ? {
-        y: { duration: 0.52, ease: [0.32, 0.72, 0, 1] },
-        opacity: { duration: 0.46, ease: 'easeOut' }
+        y: { duration: 0.42, ease: [0.32, 0.72, 0, 1] },
+        opacity: { duration: 0.36, ease: 'easeOut' }
       }
+    : isChargingActive
+    ? PILL_SPRING
     : {
         duration: isExpanded ? 0.38 : 0.32,
         ease: [0.22, 1, 0.36, 1]
@@ -294,10 +369,10 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         animate={{
           left: integerLeft - 18,
           width: targetWidth + 36,
-          height: (isExpanded ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height) + 16,
-          borderRadius: isExpanded ? '0px 0px 30px 30px' : '0px 0px 24px 24px',
+          height: (isExpanded ? WINDOW_CONFIG.panel.height : isChargingExpanded ? 42 : WINDOW_CONFIG.pill.height) + 16,
+          borderRadius: isExpanded ? '0px 0px 30px 30px' : isChargingExpanded ? '0px 0px 28px 28px' : '0px 0px 24px 24px',
           y: islandY,
-          opacity: isHidden || isExpanded || (isChargingActive && !isExpanded) ? 0 : islandOpacity
+          opacity: isHidden || isExpanded || isChargingExiting ? 0 : islandOpacity
         }}
         transition={islandTransition}
         style={{
@@ -308,8 +383,8 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           originY: 0,
           pointerEvents: 'none',
           zIndex: 99,
-          visibility: isHidden || isExpanded || (isAnyNotificationActive && !isExpanded) ? 'hidden' : 'visible',
-          animationPlayState: isHidden || isExpanded || (isAnyNotificationActive && !isExpanded) ? 'paused' : 'running'
+          visibility: isHidden || isExpanded ? 'hidden' : 'visible',
+          animationPlayState: isHidden || isExpanded ? 'paused' : 'running'
         }}
       />
 
@@ -335,8 +410,12 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         animate={{
           left: integerLeft,
           width: targetWidth,
-          height: isExpanded ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height,
-          borderRadius: isExpanded ? '0px 0px 22px 22px' : '0px 0px 17px 17px',
+          height: targetHeight,
+          borderRadius: isExpanded
+            ? '0px 0px 22px 22px'
+            : isChargingExpanded
+            ? '0px 0px 20px 20px'
+            : '0px 0px 17px 17px',
           backgroundColor: isExpanded ? 'var(--bg-panel)' : 'var(--bg-pill)',
           y: islandY,
           opacity: islandOpacity
@@ -388,7 +467,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         </div>
 
       <AnimatePresence initial={false} mode="sync">
-        {/* Collapsed Pill Content (Digital Clock or Welcome Greeting) */}
+        {/* Collapsed Pill Content (Digital Clock, Welcome Greeting, or Charging Animation) */}
         {!isExpanded && (
           <motion.div
             key="collapsed-pill-content"
@@ -406,7 +485,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               top: 0,
               left: 0,
               right: 0,
-              height: `${WINDOW_CONFIG.pill.height}px`,
+              height: `${isChargingExpanded ? 42 : WINDOW_CONFIG.pill.height}px`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -415,8 +494,8 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               pointerEvents: 'auto'
             }}
           >
-            {/* Animated Handwriting Greeting */}
-            {welcomeStage !== 'done' && (
+            {/* 1. Animated Handwriting Greeting */}
+            {welcomeStage !== 'done' && !isChargingActive && (
               <div
                 key="welcome-greeting-container"
                 className="handwriting-reveal-text-container"
@@ -443,7 +522,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               </div>
             )}
 
-            {/* Clock: reveals smoothly only after empty-pill pause */}
+            {/* 2. Clock: reveals smoothly only after empty-pill pause, fades out before charging */}
             <div
               key="pill-clock-container"
               className="island-clock-container"
@@ -454,8 +533,13 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity:
-                  welcomeStage === 'revealing' || welcomeStage === 'done' ? 1 : 0,
-                transition: 'opacity 450ms ease-in-out',
+                  !isChargingActive &&
+                  (welcomeStage === 'revealing' ||
+                    welcomeStage === 'clock_dwell' ||
+                    (welcomeStage === 'done' && !isChargingActive))
+                    ? 1
+                    : 0,
+                transition: 'opacity 380ms ease-in-out',
                 pointerEvents: 'none'
               }}
             >
@@ -473,82 +557,72 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
                 {time}
               </span>
             </div>
+
+            {/* 3. Charging animation content: seamlessly flows inside the island surface */}
+            {isChargingActive && (
+              <ChargingContent
+                phase={chargingPhase ?? 'compact'}
+                batteryState={batteryState ?? null}
+                onClick={onExpand}
+              />
+            )}
           </motion.div>
         )}
 
         {/* Expanded Panel Dashboard Content */}
         {isExpanded && (
           <motion.div
-            key="expanded-dashboard"
+            key="expanded-panel-content"
             initial={{ opacity: 0 }}
             animate={{
               opacity: 1,
-              transition: {
-                duration: 0.22,
-                delay: 0.14,
-                ease: [0.22, 1, 0.36, 1]
-              }
+              transition: { duration: 0.25, delay: 0.12, ease: [0.22, 1, 0.36, 1] }
             }}
             exit={{
               opacity: 0,
-              transition: { duration: 0.10, ease: 'easeOut' }
+              transition: { duration: 0.12, ease: 'easeOut' }
             }}
             style={{
               width: `${WINDOW_CONFIG.panel.width}px`,
               height: `${WINDOW_CONFIG.panel.height}px`,
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden',
-              pointerEvents: 'auto',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              overflow: 'hidden'
             }}
           >
-            {/* Panel Header */}
             <IslandHeader onCollapse={onCollapse} />
 
-            {/* Navigation Tab Bar */}
-            <NavigationTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
-
-            {/* Active Tab View */}
             <div
+              className="island-content-area"
               style={{
                 flex: 1,
                 overflowY: 'auto',
                 overflowX: 'hidden',
-                padding: '12px 14px',
-                display: 'flex',
-                flexDirection: 'column'
+                padding: '12px 16px 16px 16px'
               }}
             >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.12 }}
-                  style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-                >
-                  {activeTab === 'launcher' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <CommandSearch onExecuteAction={handleExecuteAction} />
-                      <ShortcutGrid onLaunch={handleExecuteAction} />
-                    </div>
-                  )}
-                  {activeTab === 'calendar' && <CalendarWidget />}
-                  {activeTab === 'system' && <SystemWidget />}
-                  {activeTab === 'clipboard' && <ClipboardWidget />}
-                  {activeTab === 'media' && <MediaWidget />}
-                  {activeTab === 'routines' && <RoutinesWidget />}
-                  {activeTab === 'settings' && <SettingsWidget />}
-                </motion.div>
-              </AnimatePresence>
+              {activeTab === 'launcher' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <CommandSearch onExecuteAction={handleExecuteAction} />
+                  <ShortcutGrid onLaunch={handleExecuteAction} />
+                </div>
+              )}
+
+              {activeTab === 'calendar' && <CalendarWidget />}
+              {activeTab === 'system' && <SystemWidget />}
+              {activeTab === 'clipboard' && <ClipboardWidget />}
+              {activeTab === 'media' && <MediaWidget />}
+              {activeTab === 'routines' && <RoutinesWidget />}
+              {activeTab === 'settings' && <SettingsWidget />}
             </div>
+
+            <NavigationTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
           </motion.div>
         )}
       </AnimatePresence>
-      </motion.div>
-    </>
+    </motion.div>
+  </>
   )
 }
 

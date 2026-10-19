@@ -801,27 +801,23 @@ export function useIslandStateMachine({
     // Now inspect coordinator queue for pending power notifications
     if (notificationQueueRef.current.length > 0) {
       console.log(
-        `[STATE_MACHINE ${Date.now()}] [is-delulu:coordinator] Welcome completed with ${notificationQueueRef.current.length} queued notification(s). Scheduling seamless handoff.`
+        `[STATE_MACHINE ${Date.now()}] [is-delulu:coordinator] Welcome & clock fade completed with ${notificationQueueRef.current.length} queued notification(s). Executing seamless handoff.`
       )
-      isClockHandoffActiveRef.current = true
+      isClockHandoffActiveRef.current = false
       clearHoverTimers()
       transitionTo('COLLAPSED')
 
-      // Hold clock visible for established dwell (800ms) before seamlessly transitioning to queued notification
-      setTimeout(() => {
-        isClockHandoffActiveRef.current = false
-        const next = dequeueNextNotification()
-        if (next) {
-          console.log(`[STATE_MACHINE ${Date.now()}] [is-delulu:coordinator] Executing seamless handoff to: ${next.type}`)
-          if (next.type === 'charging') {
-            triggerChargingRef.current(next.state, true)
-          } else if (next.type === 'energy_saver') {
-            triggerEnergySaverRef.current(next.mode, next.threshold)
-          } else if (next.type === 'low_battery') {
-            triggerLowBatteryRef.current(next.target)
-          }
+      const next = dequeueNextNotification()
+      if (next) {
+        console.log(`[STATE_MACHINE ${Date.now()}] [is-delulu:coordinator] Executing seamless handoff to: ${next.type}`)
+        if (next.type === 'charging') {
+          triggerChargingRef.current(next.state, true)
+        } else if (next.type === 'energy_saver') {
+          triggerEnergySaverRef.current(next.mode, next.threshold)
+        } else if (next.type === 'low_battery') {
+          triggerLowBatteryRef.current(next.target)
         }
-      }, 800)
+      }
     } else {
       if (isPinnedRef.current) {
         transitionTo('PINNED')
