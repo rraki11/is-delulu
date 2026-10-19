@@ -117,9 +117,12 @@ export const App: React.FC = () => {
       currentPaletteRef.current = palette
       const isLight = themeMode === 'light'
       const rawPrimary = isLight ? palette.primaryLight : palette.primary
-      const primary = !isLight && rawPrimary === '#BBFF00' ? '#60A5FA' : rawPrimary
-      const secondary = !isLight && palette.secondary === '#8B5CF6' ? '#818CF8' : palette.secondary
-      const highlight = !isLight && palette.highlight === '#00F0FF' ? '#A78BFA' : palette.highlight
+      const primary =
+        !isLight && (rawPrimary === '#BBFF00' || rawPrimary === '#60A5FA') ? '#A3E635' : rawPrimary
+      const secondary =
+        !isLight && (palette.secondary === '#818CF8') ? '#8B5CF6' : palette.secondary
+      const highlight =
+        !isLight && (palette.highlight === '#A78BFA') ? '#00F0FF' : palette.highlight
       const root = document.documentElement
 
       // Derive per-channel RGBA glow vars for primary, secondary and highlight colors
@@ -131,7 +134,7 @@ export const App: React.FC = () => {
           const num = parseInt(full, 16)
           return [(num >> 16) & 255, (num >> 8) & 255, num & 255]
         } catch {
-          return [96, 165, 250]
+          return [163, 230, 53]
         }
       }
 
@@ -144,7 +147,7 @@ export const App: React.FC = () => {
       root.style.setProperty('--accent-highlight', highlight)
       root.style.setProperty(
         '--accent-glow',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.16)` : `rgba(${pr}, ${pg}, ${pb}, 0.18)`
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.16)` : `rgba(${pr}, ${pg}, ${pb}, 0.12)`
       )
       root.style.setProperty(
         '--accent-subtle',
@@ -152,29 +155,29 @@ export const App: React.FC = () => {
       )
       root.style.setProperty(
         '--accent-border',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.20)` : `rgba(${pr}, ${pg}, ${pb}, 0.24)`
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.20)` : `rgba(${pr}, ${pg}, ${pb}, 0.32)`
       )
       root.style.setProperty(
         '--border-active',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.35)` : `rgba(${pr}, ${pg}, ${pb}, 0.38)`
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.35)` : `rgba(${pr}, ${pg}, ${pb}, 0.40)`
       )
       root.style.setProperty(
         '--border-glass',
-        isLight ? 'rgba(255, 255, 255, 0.80)' : 'rgba(255, 255, 255, 0.12)'
+        isLight ? 'rgba(255, 255, 255, 0.80)' : 'rgba(255, 255, 255, 0.07)'
       )
       const textAccent = isLight
         ? primary
-        : palette.text === '#BBFF00'
-        ? '#818CF8'
-        : palette.text || '#818CF8'
+        : palette.text === '#BBFF00' || palette.text === '#818CF8'
+        ? '#A3E635'
+        : palette.text || '#A3E635'
       root.style.setProperty('--text-accent', textAccent)
       root.style.setProperty(
         '--accent-secondary-glow',
-        isLight ? `rgba(${sr}, ${sg}, ${sb}, 0.14)` : `rgba(${sr}, ${sg}, ${sb}, 0.16)`
+        isLight ? `rgba(${sr}, ${sg}, ${sb}, 0.14)` : `rgba(${sr}, ${sg}, ${sb}, 0.08)`
       )
       root.style.setProperty(
         '--accent-highlight-glow',
-        isLight ? `rgba(${hr}, ${hg}, ${hb}, 0.12)` : `rgba(${hr}, ${hg}, ${hb}, 0.14)`
+        isLight ? `rgba(${hr}, ${hg}, ${hb}, 0.12)` : `rgba(${hr}, ${hg}, ${hb}, 0.06)`
       )
 
       // Calculate accessible contrast for text rendered directly on --accent backgrounds

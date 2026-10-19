@@ -1,46 +1,46 @@
 :root,
 [data-theme="dark"] {
-  /* Color Palette - macOS Midnight Navy Glass Aesthetic */
-  --bg-primary: #0B0F1D;
-  --bg-secondary: #11172B;
-  --bg-tertiary: #19223D;
-  --bg-card: rgba(24, 32, 56, 0.72);
-  --bg-card-hover: rgba(32, 42, 74, 0.88);
+  /* Color Palette - Premium macOS Neutral Charcoal Dark Aesthetic */
+  --bg-primary: #101112;
+  --bg-secondary: #17191B;
+  --bg-tertiary: #202326;
+  --bg-card: rgba(23, 25, 27, 0.85);
+  --bg-card-hover: rgba(32, 35, 38, 0.95);
   --bg-pill: #000000;
-  --bg-panel: rgba(15, 20, 36, 0.88);
-  --bg-input: rgba(10, 14, 26, 0.80);
+  --bg-panel: rgba(16, 17, 18, 0.94);
+  --bg-input: rgba(32, 35, 38, 0.85);
 
-  /* Accents - Refined macOS Sky & Indigo */
-  --accent: #60A5FA;
-  --accent-secondary: #818CF8;
-  --accent-highlight: #A78BFA;
-  --accent-muted: #64748B;
-  --accent-glow: rgba(96, 165, 250, 0.16);
-  --accent-secondary-glow: rgba(129, 140, 248, 0.14);
-  --accent-highlight-glow: rgba(167, 139, 250, 0.12);
-  --accent-subtle: rgba(96, 165, 250, 0.08);
-  --accent-border: rgba(96, 165, 250, 0.24);
+  /* Accents - Restrained Green for Meaningful States & Controls */
+  --accent: #A3E635;
+  --accent-secondary: #8B5CF6;
+  --accent-highlight: #00F0FF;
+  --accent-muted: #8E9296;
+  --accent-glow: rgba(163, 230, 53, 0.12);
+  --accent-secondary-glow: rgba(139, 92, 246, 0.08);
+  --accent-highlight-glow: rgba(0, 240, 255, 0.06);
+  --accent-subtle: rgba(163, 230, 53, 0.08);
+  --accent-border: rgba(163, 230, 53, 0.32);
 
-  /* Typography - Clean Off-White with Cool Gray Secondary */
+  /* Typography - Soft Off-White with Muted Neutral Gray Secondary */
   --font-display: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
   --font-text: 'SF Pro Display', 'SF Pro Text', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
   --tracking-display: 0;
   --tracking-text: 0;
   --tracking-caps: 0.04em;
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-  --text-accent: #818CF8;
-  --text-on-accent: #FFFFFF;
+  --text-primary: #F4F5F6;
+  --text-secondary: #8E9296;
+  --text-muted: #5E6266;
+  --text-accent: #A3E635;
+  --text-on-accent: #101112;
 
-  /* Borders & Dividers - Delicate Cool-Toned Borders */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-glass: rgba(255, 255, 255, 0.12);
-  --border-active: rgba(99, 102, 241, 0.40);
-  --border-panel: rgba(255, 255, 255, 0.10);
-  --border-input: rgba(255, 255, 255, 0.10);
-  --border-card-hover: rgba(148, 163, 184, 0.25);
+  /* Borders & Dividers - Extremely Subtle Neutral Charcoal Borders */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-glass: rgba(255, 255, 255, 0.07);
+  --border-active: rgba(163, 230, 53, 0.40);
+  --border-panel: rgba(255, 255, 255, 0.08);
+  --border-input: rgba(255, 255, 255, 0.07);
+  --border-card-hover: rgba(255, 255, 255, 0.12);
 
   /* Radii */
   --radius-pill: 0 0 16px 16px;
@@ -49,60 +49,56 @@
   --radius-button: 10px;
   --radius-tag: 6px;
 
-  /* Shadows - Layered Depth without Muddy Green Halos */
-  --shadow-pill: 0 6px 14px -2px rgba(0, 0, 0, 0.55),
-                 0 2px 5px -1px rgba(0, 0, 0, 0.35),
-                 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --shadow-panel: 0 24px 48px -8px rgba(0, 0, 0, 0.65),
-                  0 8px 20px -4px rgba(0, 0, 0, 0.45),
-                  0 0 0 1px rgba(255, 255, 255, 0.08),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.30),
-                 inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
-  --shadow-input: 0 2px 6px rgba(0, 0, 0, 0.25),
-                  inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  /* Shadows - Deep, Soft, Neutral Depth (No Blue Halo, No Top Inset White Line) */
+  --shadow-pill: 0 6px 16px -2px rgba(0, 0, 0, 0.65),
+                 0 2px 6px -1px rgba(0, 0, 0, 0.45);
+  --shadow-panel: 0 24px 48px -8px rgba(0, 0, 0, 0.80),
+                  0 8px 24px -4px rgba(0, 0, 0, 0.60);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-input: 0 1px 3px rgba(0, 0, 0, 0.30),
+                  inset 0 1px 2px rgba(0, 0, 0, 0.30);
 
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-normal: 240ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Neumorphic segmented nav track - Dark Navy Track with Indigo Pill */
-  --nav-track-bg: rgba(11, 15, 28, 0.70);
-  --nav-track-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.40), inset 0 1px 2px rgba(0, 0, 0, 0.30);
-  --nav-pill-bg: rgba(44, 56, 96, 0.85);
-  --nav-pill-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  --nav-item-active-color: #F8FAFC;
-  --nav-item-inactive-color: rgba(148, 163, 184, 0.65);
+  /* Neumorphic segmented nav track - Dark Charcoal Track with Graphite Pill */
+  --nav-track-bg: rgba(16, 17, 18, 0.80);
+  --nav-track-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.50);
+  --nav-pill-bg: rgba(36, 39, 43, 0.90);
+  --nav-pill-shadow: 0 2px 6px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --nav-item-active-color: #F4F5F6;
+  --nav-item-inactive-color: rgba(142, 146, 150, 0.60);
 
   /* Interactive Elements & Badges */
-  --search-icon-color: #94A3B8;
-  --search-item-selected-bg: rgba(44, 56, 96, 0.60);
-  --search-item-selected-border: rgba(99, 102, 241, 0.30);
-  --search-item-icon-bg: rgba(60, 75, 125, 0.75);
-  --search-item-icon-color: #F8FAFC;
-  --icon-container-bg: rgba(255, 255, 255, 0.05);
-  --icon-container-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.20);
-  --badge-bg: rgba(99, 102, 241, 0.15);
-  --badge-text: #A5B4FC;
+  --search-icon-color: #8E9296;
+  --search-item-selected-bg: rgba(36, 39, 43, 0.70);
+  --search-item-selected-border: rgba(255, 255, 255, 0.08);
+  --search-item-icon-bg: rgba(45, 49, 54, 0.85);
+  --search-item-icon-color: #F4F5F6;
+  --icon-container-bg: rgba(255, 255, 255, 0.04);
+  --icon-container-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.30);
+  --badge-bg: rgba(163, 230, 53, 0.12);
+  --badge-text: #A3E635;
   --badge-mock-bg: rgba(255, 255, 255, 0.05);
-  --badge-mock-text: #94A3B8;
-  --hover-subtle: rgba(255, 255, 255, 0.08);
-  --btn-icon-bg: rgba(255, 255, 255, 0.05);
-  --btn-icon-hover-bg: rgba(255, 255, 255, 0.10);
-  --btn-icon-hover-border: rgba(255, 255, 255, 0.15);
+  --badge-mock-text: #8E9296;
+  --hover-subtle: rgba(255, 255, 255, 0.06);
+  --btn-icon-bg: rgba(255, 255, 255, 0.04);
+  --btn-icon-hover-bg: rgba(255, 255, 255, 0.08);
+  --btn-icon-hover-border: rgba(255, 255, 255, 0.12);
 
   /* Calendar Widget Tokens */
-  --cal-card-bg: linear-gradient(180deg, #161D36 0%, #101528 100%);
-  --cal-card-border: rgba(255, 255, 255, 0.10);
-  --cal-card-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  --cal-notch-bg: rgba(12, 16, 30, 0.95);
-  --cal-btn-bg: rgba(255, 255, 255, 0.06);
-  --cal-btn-border: rgba(255, 255, 255, 0.10);
-  --cal-btn-color: #F8FAFC;
-  --cal-panel-bg: rgba(22, 28, 50, 0.85);
-  --cal-panel-border: rgba(255, 255, 255, 0.08);
-  --cal-event-bg: rgba(30, 38, 68, 0.60);
-  --cal-event-border: rgba(255, 255, 255, 0.08);
+  --cal-card-bg: linear-gradient(180deg, #17191B 0%, #121314 100%);
+  --cal-card-border: rgba(255, 255, 255, 0.07);
+  --cal-card-shadow: 0 20px 40px rgba(0, 0, 0, 0.65);
+  --cal-notch-bg: rgba(16, 17, 18, 0.95);
+  --cal-btn-bg: rgba(255, 255, 255, 0.05);
+  --cal-btn-border: rgba(255, 255, 255, 0.07);
+  --cal-btn-color: #F4F5F6;
+  --cal-panel-bg: rgba(23, 25, 27, 0.85);
+  --cal-panel-border: rgba(255, 255, 255, 0.05);
+  --cal-event-bg: rgba(32, 35, 38, 0.60);
+  --cal-event-border: rgba(255, 255, 255, 0.05);
 }
 
 [data-theme="light"] {

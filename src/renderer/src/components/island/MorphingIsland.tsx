@@ -490,6 +490,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           transformOrigin: 'top center',
           originX: 0.5,
           border: isExpanded ? '1px solid var(--border-panel)' : 'none',
+          borderTop: 'none',
           backdropFilter: isExpanded ? 'blur(36px) saturate(180%)' : 'none',
           WebkitBackdropFilter: isExpanded ? 'blur(36px) saturate(180%)' : 'none',
           overflow: 'hidden',

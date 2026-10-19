@@ -100,14 +100,14 @@ function toHex(r: number, g: number, b: number): string {
  */
 export function getDefaultAccentPalette(): AccentPalette {
   return {
-    primary: '#60A5FA',
+    primary: '#A3E635',
     primaryLight: '#6366F1',
-    secondary: '#818CF8',
-    highlight: '#A78BFA',
-    glow: 'rgba(96, 165, 250, 0.16)',
-    subtle: 'rgba(96, 165, 250, 0.08)',
-    border: 'rgba(96, 165, 250, 0.24)',
-    text: '#FFFFFF',
+    secondary: '#8B5CF6',
+    highlight: '#00F0FF',
+    glow: 'rgba(163, 230, 53, 0.12)',
+    subtle: 'rgba(163, 230, 53, 0.08)',
+    border: 'rgba(163, 230, 53, 0.32)',
+    text: '#A3E635',
     sourceWallpaper: undefined
   }
 }
