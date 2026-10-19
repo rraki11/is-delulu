@@ -210,15 +210,17 @@ app.whenReady().then(async () => {
   console.log(`2. Visual height consistency between "hi" and "hello":`)
   console.log(`   Difference: ${heightDiff.toFixed(2)}px -> ${isConsistent ? 'PASSED (Consistent)' : 'FAILED'}`)
 
-  // 3. Island scaling around greeting (height expanded to ~42px, widths adapted)
+  // 3. Island height increased only, width remains exactly 190px (WINDOW_CONFIG.pill.width)
   const hiPillH = results.hi?.surface?.height || 0
   const helloPillH = results.hello?.surface?.height || 0
   const hiPillW = results.hi?.surface?.width || 0
   const helloPillW = results.hello?.surface?.width || 0
-  const isIslandScaled = hiPillH >= 40 && helloPillH >= 40 && helloPillW > hiPillW
-  console.log(`3. Dynamic Island fluid scaling around greeting dimensions:`)
-  console.log(`   "hi" pill: ${hiPillW.toFixed(1)}px x ${hiPillH.toFixed(1)}px`)
-  console.log(`   "hello" pill: ${helloPillW.toFixed(1)}px x ${helloPillH.toFixed(1)}px -> ${isIslandScaled ? 'PASSED (Naturally Adapted)' : 'FAILED'}`)
+  const widthUnchanged = Math.abs(hiPillW - 190) <= 0.5 && Math.abs(helloPillW - 190) <= 0.5
+  const heightIncreased = hiPillH >= 40 && helloPillH >= 40
+  const isIslandScaled = widthUnchanged && heightIncreased
+  console.log(`3. Island height increased ONLY, width remains exactly unchanged (190px):`)
+  console.log(`   "hi" pill: ${hiPillW.toFixed(1)}px x ${hiPillH.toFixed(1)}px (Width ok: ${Math.abs(hiPillW - 190) <= 0.5})`)
+  console.log(`   "hello" pill: ${helloPillW.toFixed(1)}px x ${helloPillH.toFixed(1)}px (Width ok: ${Math.abs(helloPillW - 190) <= 0.5}) -> ${isIslandScaled ? 'PASSED (Height Only Gained)' : 'FAILED'}`)
 
   // 4. Centering throughout scaling (center must be at window center within 1px)
   const hiExpectedCenter = results.hi.windowWidth / 2

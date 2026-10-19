@@ -351,15 +351,12 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
       welcomeStage === 'fading' ||
       welcomeStage === 'pausing')
 
-  const greetingWidth = greeting === 'hello' ? 212 : 160
   const greetingHeight = 42
 
   const targetWidth = isExpanded
     ? WINDOW_CONFIG.panel.width
     : isChargingExpanded
     ? 320
-    : isGreetingActive
-    ? greetingWidth
     : WINDOW_CONFIG.pill.width
 
   const targetHeight = isExpanded
