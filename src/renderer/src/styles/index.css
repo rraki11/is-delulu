@@ -171,6 +171,15 @@
   font-display: block;
 }
 
+/* Caveat Script Font for Welcome Handwriting Animation */
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 500;
+  src: url('../assets/fonts/Caveat.woff2') format('woff2');
+  font-display: swap;
+}
+
 /* Reset & Window Setup */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -451,6 +460,17 @@ html, body {
   50%       { opacity: 1;   transform: scale(1.1); }
 }
 
+/* ── Audio waveform bars ────────────────────────────────────────────────
+ * Used by the compact media player waveform visualiser.
+ * Each bar independently oscillates in height to simulate activity.
+ * --------------------------------------------------------------------- */
+@keyframes audioWave {
+  0%, 100% { transform: scaleY(0.55); }
+  25%       { transform: scaleY(1.00); }
+  50%       { transform: scaleY(0.70); }
+  75%       { transform: scaleY(0.90); }
+}
+
 .pulse-animation {
   animation: pulseGlow 2.4s ease-in-out infinite;
 }
@@ -680,5 +700,166 @@ html, body {
   .cal-accent-orb::before,
   .cal-accent-orb::after {
     animation: none !important;
+  }
+}
+
+/* =====================================================================
+ * Charging Notification Pill
+ * A transient, top-center pill that shows when the charger is plugged in.
+ * All accent colors come from CSS vars set by applyAccentPalette() — fully
+ * wallpaper-adaptive. The pill's interior stays near-black for contrast.
+ * ===================================================================== */
+
+/* ── Outer halo glow (sits behind the pill surface) ───────────────── */
+.charging-pill-glow {
+  background: radial-gradient(
+    ellipse 70% 80% at 50% 30%,
+    var(--accent-glow)   0%,
+    var(--accent-subtle) 55%,
+    transparent          85%
+  );
+  filter: blur(14px);
+  pointer-events: none;
+  animation: chargingHaloPulse 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes chargingHaloPulse {
+  0%   { opacity: 0.65; }
+  100% { opacity: 1.0;  }
+}
+
+/* ── Pill surface ──────────────────────────────────────────────────── */
+.charging-pill-surface {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.75),
+    0 2px 6px  rgba(0, 0, 0, 0.5),
+    0 0 0 0.5px rgba(255, 255, 255, 0.12);
+}
+
+/* ── Compact view: bolt icon ──────────────────────────────────────── */
+.charging-icon {
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  filter: drop-shadow(0 0 5px var(--accent-glow));
+  animation: chargingBoltPulse 1.8s ease-in-out infinite;
+}
+
+.charging-icon--compact {
+  filter: drop-shadow(0 0 6px var(--accent-glow));
+}
+
+@keyframes chargingBoltPulse {
+  0%, 100% { opacity: 0.80; }
+  50%       { opacity: 1.00; }
+}
+
+/* ── Compact view: percentage label ──────────────────────────────── */
+.charging-percent {
+  color: var(--accent);
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+/* ── Expanded view: progress bar track ───────────────────────────── */
+.charging-bar-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: visible;
+  position: relative;
+}
+
+/* ── Filled portion of the progress bar ──────────────────────────── */
+.charging-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    var(--accent-subtle)  0%,
+    var(--accent)         85%,
+    var(--accent)         100%
+  );
+  position: relative;
+  /* Luminous trailing glow along bar length */
+  box-shadow:
+    0 0  6px 1px var(--accent-glow),
+    0 0 14px 2px var(--accent-subtle);
+  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 2%;
+}
+
+/* ── Leading edge: glowing head bubble (bolt + %) ────────────────── */
+.charging-bar-head {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid var(--accent-border);
+  border-radius: 9999px;
+  padding: 2px 6px 2px 4px;
+  white-space: nowrap;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  /* Intense outer glow on the head bubble */
+  box-shadow:
+    0 0 10px 3px var(--accent-glow),
+    0 0  4px 1px var(--accent-subtle);
+  animation: chargingHeadGlow 2.2s ease-in-out infinite;
+}
+
+@keyframes chargingHeadGlow {
+  0%, 100% { box-shadow: 0 0 10px 3px var(--accent-glow), 0 0 4px 1px var(--accent-subtle); }
+  50%       { box-shadow: 0 0 16px 5px var(--accent-glow), 0 0 6px 2px var(--accent-subtle); }
+}
+
+/* ── Time remaining label ─────────────────────────────────────────── */
+.charging-time-remaining {
+  color: rgba(255, 255, 255, 0.52);
+  letter-spacing: 0.01em;
+}
+
+/* ── Reduce motion overrides ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .charging-pill-glow,
+  .charging-icon,
+  .charging-bar-fill,
+  .charging-bar-head {
+    animation: none !important;
+  }
+  .charging-bar-fill {
+    transition: none !important;
+  }
+}
+
+/* ── Welcome Greeting Handwriting Animation ───────────────────────── */
+@keyframes handwriting-reveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0% 0 0);
+  }
+}
+
+.handwriting-reveal-text {
+  font-family: 'Caveat', cursive, 'SF Pro Display', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(244, 245, 240, 0.95);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  animation: handwriting-reveal 1300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handwriting-reveal-text {
+    animation: none !important;
+    clip-path: inset(0 0% 0 0) !important;
   }
 }

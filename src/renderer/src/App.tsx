@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { MorphingIsland } from './components/island/MorphingIsland'
+import { ChargingPill } from './components/island/ChargingPill'
+import { EnergySaverPill } from './components/island/EnergySaverPill'
+import { LowBatteryPill } from './components/island/LowBatteryPill'
 import { useIslandStore } from './store/useIslandStore'
 import { useIslandStateMachine } from './hooks/useIslandStateMachine'
 import { IslandMode, AccentPalette } from '../../shared/types'
@@ -18,7 +21,8 @@ export const App: React.FC = () => {
     setMediaState,
     setRoutines,
     statusMessage,
-    setStatusMessage
+    setStatusMessage,
+    setBatteryState
   } = useIslandStore()
 
   const isIgnoringRef = useRef(true)
@@ -42,16 +46,36 @@ export const App: React.FC = () => {
     }
   }, [])
 
-  // Centralized State Machine for HIDDEN, COLLAPSED, EXPANDED, PINNED
+  // Centralized State Machine for HIDDEN, NORMAL_REVEALING, COLLAPSED, EXPANDED, NOTIFICATIONS, PINNED
   const {
     state: machineState,
     currentMode,
+    chargingPhase,
+    energySaverPhase,
+    lowBatteryPhase,
+    welcomePhase,
+    welcomeSessionId,
+    energySaverMode,
+    energySaverThreshold,
+    isChargingActive,
+    isNotificationActive,
+    activeNotification,
+    batteryState: machineBatteryState,
+    setBatteryState: setMachineBatteryState,
     handlePointerEnter,
     handlePointerLeave,
     expand,
     collapse,
     reveal,
     hide,
+    triggerCharging,
+    triggerEnergySaver,
+    triggerLowBattery,
+    triggerWelcome,
+    completeWelcome,
+    dismissWelcome,
+    dismissCharging,
+    dismissNotification,
     clearTimer
   } = useIslandStateMachine({
     initialMode: mode,
@@ -62,8 +86,35 @@ export const App: React.FC = () => {
     updateMouseHitTest
   })
 
+  const handleWelcomeComplete = useCallback(() => {
+    hasShownWelcomeRef.current = true
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.setItem('is-delulu:welcome-shown', 'true')
+    }
+    completeWelcome()
+  }, [completeWelcome])
+
   const currentModeRef = useRef(currentMode)
   currentModeRef.current = currentMode
+  const isChargingActiveRef = useRef(isChargingActive)
+  isChargingActiveRef.current = isChargingActive
+  const isNotificationActiveRef = useRef(isNotificationActive)
+  isNotificationActiveRef.current = isNotificationActive
+  const welcomePhaseRef = useRef(welcomePhase)
+  welcomePhaseRef.current = welcomePhase
+
+  // Track whether welcome has been shown this session (once per startup)
+  const hasShownWelcomeRef = useRef(
+    typeof window !== 'undefined' && window.sessionStorage
+      ? window.sessionStorage.getItem('is-delulu:welcome-shown') === 'true'
+      : false
+  )
+
+  const prevChargingRef = useRef<boolean | null>(null)
+  const prevEnergySaverRef = useRef<boolean | null>(null)
+  const prevBatteryPercentRef = useRef<number | null>(null)
+  const wasLowBatteryTriggeredRef = useRef<boolean>(false)
+  const isStartupRef = useRef(true)
 
   // Apply accent palette CSS variables to document root
   const applyAccentPalette = useCallback(
@@ -143,6 +194,20 @@ export const App: React.FC = () => {
       }
     })
 
+    // Sync initial mode with native window state
+    if (window.isDelulu.getIslandMode) {
+      window.isDelulu.getIslandMode().then((loadedMode) => {
+        if (welcomePhaseRef.current === 'active' || isNotificationActiveRef.current) return
+        if (loadedMode === 'hidden') {
+          hide()
+        } else if (loadedMode === 'expanded') {
+          expand()
+        } else if (loadedMode === 'collapsed') {
+          collapse()
+        }
+      })
+    }
+
     // 2. Initial telemetry & services load
     window.isDelulu.getSystemStats().then(setSystemStats)
     window.isDelulu.getClipboardHistory().then(setClipboardItems)
@@ -154,6 +219,7 @@ export const App: React.FC = () => {
     const unsubClip = window.isDelulu.onClipboardUpdate(setClipboardItems)
 
     const unsubMode = window.isDelulu.onIslandModeChanged((nextMode) => {
+      if (welcomePhaseRef.current === 'active' || isNotificationActiveRef.current) return
       if (nextMode === currentModeRef.current) return
       if (nextMode === 'expanded') {
         expand()
@@ -169,6 +235,7 @@ export const App: React.FC = () => {
     })
 
     const unsubHover = window.isDelulu.onIslandHoverState((isHovered) => {
+      if (isChargingActiveRef.current) return
       if (isHovered) {
         handlePointerEnter()
       } else {
@@ -204,6 +271,149 @@ export const App: React.FC = () => {
         })
       : () => {}
 
+    // Battery state subscription (for store/SystemWidget use, charging, energy saver, low battery detection)
+    const unsubBattery = window.isDelulu.onBatteryStateUpdate
+      ? window.isDelulu.onBatteryStateUpdate((state) => {
+          setBatteryState(state)
+          setMachineBatteryState(state)
+
+          const isConnected = state.isOnAC === true || state.isCharging === true
+          const prevConnected = prevChargingRef.current
+          const pct = state.percent
+          const prevPct = prevBatteryPercentRef.current
+          const isEnergySaver = state.isEnergySaver === true
+          const prevEnergySaver = prevEnergySaverRef.current
+
+          // Reset low battery trigger if battery rises strictly above 30%
+          if (pct !== null && pct > 30) {
+            wasLowBatteryTriggeredRef.current = false
+          }
+
+          if (!isStartupRef.current) {
+            // 1. Charging connection edge
+            if (isConnected && prevConnected === false) {
+              triggerCharging(state)
+            }
+
+            // 2. Charging disconnection edge
+            if (prevConnected === true && !isConnected) {
+              dismissCharging()
+              // If user unplugs while already at or below 30%, trigger low battery once
+              if (pct !== null && pct <= 30 && !wasLowBatteryTriggeredRef.current) {
+                wasLowBatteryTriggeredRef.current = true
+                triggerLowBattery(state)
+              }
+            }
+
+            // 3. Low Battery downward crossing on battery power:
+            // Trigger when crossing from > 30% to <= 30% while NOT connected to power
+            if (
+              !isConnected &&
+              prevPct !== null &&
+              prevPct > 30 &&
+              pct !== null &&
+              pct <= 30 &&
+              !wasLowBatteryTriggeredRef.current
+            ) {
+              wasLowBatteryTriggeredRef.current = true
+              triggerLowBattery(state)
+            }
+          }
+
+          prevChargingRef.current = isConnected
+          prevBatteryPercentRef.current = pct
+          if (state.isEnergySaver !== null && state.isEnergySaver !== undefined) {
+            prevEnergySaverRef.current = isEnergySaver
+          }
+        })
+      : () => {}
+
+    const unsubCharging = window.isDelulu.onChargingTriggered
+      ? window.isDelulu.onChargingTriggered((state) => {
+          triggerCharging(state)
+        })
+      : () => {}
+
+    const unsubChargingPriority = window.isDelulu.onChargingPriority
+      ? window.isDelulu.onChargingPriority(() => {
+          window.isDelulu.getBatteryState().then((state) => {
+            triggerCharging(state)
+          })
+        })
+      : () => {}
+
+    const unsubEnergySaver = window.isDelulu.onEnergySaverChanged
+      ? window.isDelulu.onEnergySaverChanged((data) => {
+          console.log(
+            `[is-delulu:renderer] Received battery:energy-saver-changed event: mode=${data.mode}, threshold=${data.threshold}`
+          )
+          triggerEnergySaver(data.mode, data.threshold)
+        })
+      : () => {}
+
+    // Listen for system lifecycle events (e.g. startup, resume from sleep/hibernation)
+    const unsubLifecycle = window.isDelulu.onLifecycleEvent
+      ? window.isDelulu.onLifecycleEvent((evt) => {
+          console.log(`[is-delulu:renderer] Received lifecycle event: ${evt.type}`)
+          if (evt.type === 'startup' || evt.type === 'resume') {
+            hasShownWelcomeRef.current = false
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              window.sessionStorage.removeItem('is-delulu:welcome-shown')
+            }
+            console.log(
+              `[is-delulu:renderer] Triggering welcome greeting sequence on ${evt.type}.`
+            )
+            triggerWelcome(true)
+          }
+        })
+      : () => {}
+
+    // Load initial battery state without startup delay
+    window.isDelulu.getBatteryState().then((initial) => {
+      setBatteryState(initial)
+      setMachineBatteryState(initial)
+      const isConnected = initial.isOnAC === true || initial.isCharging === true
+      prevChargingRef.current = isConnected
+      prevBatteryPercentRef.current = initial.percent
+      if (initial.isEnergySaver !== null && initial.isEnergySaver !== undefined) {
+        prevEnergySaverRef.current = initial.isEnergySaver === true
+      }
+      if (initial.percent !== null && initial.percent <= 30 && !isConnected) {
+        // App launches with <= 30% on battery: this is an eligible low-battery notification
+        // Enqueue it to run after welcome greeting completes!
+        wasLowBatteryTriggeredRef.current = true
+        console.log(
+          '[is-delulu:renderer] Startup with low battery: enqueuing eligible low-battery notification.'
+        )
+        triggerLowBattery(initial)
+      }
+      isStartupRef.current = false
+    })
+
+    // Authoritative welcome sequence initialization
+    if (window.isDelulu.checkWelcome) {
+      window.isDelulu.checkWelcome().then(({ shouldWelcome }) => {
+        console.log(`[is-delulu:renderer] checkWelcome response: shouldWelcome=${shouldWelcome}`)
+        if (shouldWelcome) {
+          hasShownWelcomeRef.current = true
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.removeItem('is-delulu:welcome-shown')
+          }
+          if (welcomePhaseRef.current !== 'active') {
+            console.log(
+              '[is-delulu:renderer] Triggering welcome greeting sequence for fresh application startup.'
+            )
+            triggerWelcome(true)
+          }
+        } else {
+          hasShownWelcomeRef.current = true
+          if (welcomePhaseRef.current === 'active') {
+            completeWelcome()
+          }
+        }
+      })
+    }
+
     // Load initial accent palette and subscribe to updates
     if (window.isDelulu.getAccentPalette) {
       window.isDelulu.getAccentPalette().then((palette) => {
@@ -221,6 +431,11 @@ export const App: React.FC = () => {
       unsubSystem()
       unsubClip()
       unsubMedia()
+      unsubBattery()
+      unsubCharging()
+      unsubChargingPriority()
+      unsubEnergySaver()
+      unsubLifecycle()
       unsubMode()
       unsubReveal()
       unsubHover()
@@ -236,6 +451,15 @@ export const App: React.FC = () => {
     setMediaState,
     setRoutines,
     setPreferences,
+    setBatteryState,
+    setMachineBatteryState,
+    triggerCharging,
+    triggerEnergySaver,
+    triggerLowBattery,
+    triggerWelcome,
+    dismissWelcome,
+    dismissCharging,
+    dismissNotification,
     applyTheme,
     expand,
     collapse,
@@ -249,9 +473,44 @@ export const App: React.FC = () => {
   // Track global pointer movements for hit testing & click pass-through
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent): void => {
-      if (currentMode === 'hidden') return
+      // 1. While any notification is active, hit-test the active notification pill surface
+      // to permit clicking into the dashboard, without triggering normal island hover
+      if (isNotificationActiveRef.current) {
+        const notifSurface = document.querySelector(
+          '.charging-pill-surface, .energy-saver-pill-surface, .low-battery-pill-surface'
+        )
+        if (notifSurface) {
+          const rect = notifSurface.getBoundingClientRect()
+          const isInside =
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom
+          updateMouseHitTest(isInside)
+        } else {
+          updateMouseHitTest(false)
+        }
+        return
+      }
+
+      // 1b. While welcome animation is active, let clicks pass through
+      if (welcomePhaseRef.current === 'active') {
+        updateMouseHitTest(false)
+        return
+      }
+
+      // 2. While island is hidden, ensure clicks pass through transparent window
+      if (currentMode === 'hidden') {
+        updateMouseHitTest(false)
+        return
+      }
+
+      // 3. Normal visible island surface hit-testing
       const surface = document.getElementById('island-surface')
-      if (!surface) return
+      if (!surface) {
+        updateMouseHitTest(false)
+        return
+      }
 
       const rect = surface.getBoundingClientRect()
       const isInside =
@@ -259,6 +518,8 @@ export const App: React.FC = () => {
         e.clientX <= rect.right &&
         e.clientY >= rect.top &&
         e.clientY <= rect.bottom
+
+      updateMouseHitTest(isInside)
 
       if (isInside) {
         handlePointerEnter()
@@ -268,11 +529,17 @@ export const App: React.FC = () => {
     }
 
     const handleWindowMouseLeave = (): void => {
-      handlePointerLeave()
+      updateMouseHitTest(false)
+      if (!isNotificationActiveRef.current) {
+        handlePointerLeave()
+      }
     }
 
     const handleWindowBlur = (): void => {
-      handlePointerLeave()
+      updateMouseHitTest(false)
+      if (!isNotificationActiveRef.current) {
+        handlePointerLeave()
+      }
     }
 
     window.addEventListener('mousemove', handleGlobalMouseMove, { passive: true })
@@ -283,7 +550,7 @@ export const App: React.FC = () => {
       window.removeEventListener('mouseleave', handleWindowMouseLeave)
       window.removeEventListener('blur', handleWindowBlur)
     }
-  }, [currentMode, handlePointerEnter, handlePointerLeave])
+  }, [currentMode, handlePointerEnter, handlePointerLeave, updateMouseHitTest])
 
   // Handle Escape key to collapse
   useEffect(() => {
@@ -317,6 +584,41 @@ export const App: React.FC = () => {
         pointerEvents: 'none'
       }}
     >
+      {/* Charging notification pill — rendered at top-center */}
+      <ChargingPill
+        phase={chargingPhase}
+        batteryState={machineBatteryState}
+        onClick={() => {
+          dismissCharging()
+          expand()
+        }}
+      />
+
+      {/* Energy Saver notification pill — rendered at top-center */}
+      {(activeNotification === 'energy_saver' || energySaverPhase === 'exiting') && (
+        <EnergySaverPill
+          phase={energySaverPhase}
+          mode={energySaverMode}
+          threshold={energySaverThreshold}
+          onClick={() => {
+            dismissNotification()
+            expand()
+          }}
+        />
+      )}
+
+      {/* Low Battery notification pill — rendered at top-center */}
+      {(activeNotification === 'low_battery' || lowBatteryPhase === 'exiting') && (
+        <LowBatteryPill
+          phase={lowBatteryPhase}
+          batteryState={machineBatteryState}
+          onClick={() => {
+            dismissNotification()
+            expand()
+          }}
+        />
+      )}
+
       {/* Single coherent morphing island container */}
       <MorphingIsland
         mode={currentMode}
@@ -324,6 +626,11 @@ export const App: React.FC = () => {
         onCollapse={collapse}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
+        isChargingActive={isChargingActive}
+        isNotificationActive={isNotificationActive}
+        welcomeActive={welcomePhase === 'active'}
+        welcomeKey={welcomeSessionId}
+        onWelcomeComplete={handleWelcomeComplete}
       />
 
       {/* Floating Status Toast Feedback */}

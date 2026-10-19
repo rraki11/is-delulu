@@ -5,10 +5,46 @@ import { IslandMode } from '../shared/types'
 import { getPreferences, updatePreferences } from './services/preferences'
 
 let mainWindow: BrowserWindow | null = null
-let currentMode: IslandMode = 'collapsed'
+let currentMode: IslandMode = 'hidden'
 let activationTimer: NodeJS.Timeout | null = null
 let isHoverInWindowOrZone = false
 let forceVisibleDebug = process.argv.includes('--force-visible') || process.env.DEBUG_ISLAND === '1'
+let isChargingNotificationActive = false
+let hasShownWelcomeInSession = false
+let isWelcomeOngoing = false
+
+export function getHasShownWelcome(): boolean {
+  return hasShownWelcomeInSession
+}
+
+export function markWelcomeShown(): void {
+  hasShownWelcomeInSession = true
+  isWelcomeOngoing = false
+  console.log('[is-delulu:lifecycle] Welcome greeting marked completed in session.')
+}
+
+export function resetWelcomeShownForResume(): void {
+  hasShownWelcomeInSession = false
+  isWelcomeOngoing = false
+  console.log('[is-delulu:lifecycle] Welcome state reset for system resume.')
+}
+
+export function showIslandWindowForWelcome(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  isWelcomeOngoing = true
+  currentMode = 'collapsed'
+  enforceCenteredPosition('collapsed')
+  if (!mainWindow.isVisible()) {
+    mainWindow.showInactive()
+    mainWindow.setIgnoreMouseEvents(true, { forward: true })
+  }
+  mainWindow.webContents.send('island:mode-changed', 'collapsed')
+  console.log('[is-delulu:window] Native window revealed for welcome greeting sequence.')
+}
+
+export function isChargingNotificationOngoing(): boolean {
+  return isChargingNotificationActive
+}
 
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow
@@ -90,7 +126,10 @@ export function createMainWindow(): BrowserWindow {
   mainWindow.on('ready-to-show', () => {
     console.log('[is-delulu:window] ready-to-show event fired')
     const prefs = getPreferences()
-    if (prefs.isPinned || forceVisibleDebug) {
+    if (!hasShownWelcomeInSession) {
+      showIslandWindowForWelcome()
+      console.log('[is-delulu:window] Showing window on startup for welcome sequence')
+    } else if (prefs.isPinned || forceVisibleDebug) {
       currentMode = 'collapsed'
       enforceCenteredPosition('collapsed')
       mainWindow?.showInactive()
@@ -101,6 +140,7 @@ export function createMainWindow(): BrowserWindow {
       currentMode = 'hidden'
       enforceCenteredPosition('hidden')
       mainWindow?.hide()
+      mainWindow?.webContents.send('island:mode-changed', 'hidden')
       console.log('[is-delulu:window] Window initialized in hidden state on startup')
     }
   })
@@ -136,6 +176,9 @@ export function createMainWindow(): BrowserWindow {
 
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('[is-delulu:window] Renderer web contents loaded successfully')
+    if (!hasShownWelcomeInSession) {
+      mainWindow?.webContents.send('island:lifecycle-event', { type: 'startup' })
+    }
   })
 
   // Re-center window when screen resolution or DPI scaling changes
@@ -199,14 +242,20 @@ export function setIslandWindowMode(mode: IslandMode): void {
   console.log(`[is-delulu:window] Mode set to '${mode}'. Current visible: ${mainWindow.isVisible()}`)
 
   if (mode === 'hidden') {
-    if (!forceVisibleDebug) {
+    if (!forceVisibleDebug && !isNotificationOngoing()) {
       mainWindow.setIgnoreMouseEvents(true, { forward: true })
       // Allow the smooth collapse animation into the top border to finish before native hide
       setTimeout(() => {
-        if (currentMode === 'hidden' && mainWindow && !mainWindow.isDestroyed() && !forceVisibleDebug) {
+        if (
+          currentMode === 'hidden' &&
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          !forceVisibleDebug &&
+          !isNotificationOngoing()
+        ) {
           mainWindow.hide()
         }
-      }, 400)
+      }, 650)
     }
     return
   }
@@ -217,6 +266,64 @@ export function setIslandWindowMode(mode: IslandMode): void {
     mainWindow.showInactive()
     mainWindow.setIgnoreMouseEvents(true, { forward: true })
   }
+}
+
+let activeNotificationType: 'charging' | 'energy_saver' | 'low_battery' | null = null
+
+export function isNotificationOngoing(): boolean {
+  return activeNotificationType !== null || isChargingNotificationActive || isWelcomeOngoing
+}
+
+/**
+ * Automatically reveals the native window for transient notifications (Charging, Energy Saver, Low Battery).
+ * Ensures the window is visible immediately without requiring hover or user input,
+ * but keeps it completely non-activating (showInactive) and click-through (setIgnoreMouseEvents).
+ */
+export function showNotificationWindow(
+  type: 'charging' | 'energy_saver' | 'low_battery' = 'charging'
+): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  activeNotificationType = type
+  isChargingNotificationActive = type === 'charging'
+  isHoverInWindowOrZone = false
+  enforceCenteredPosition('collapsed')
+  if (!mainWindow.isVisible()) {
+    mainWindow.showInactive()
+    mainWindow.setIgnoreMouseEvents(true, { forward: true })
+    console.log(`[is-delulu:window] Native window revealed for automatic ${type} notification`)
+  }
+  if (type === 'charging') {
+    mainWindow.webContents.send('island:charging-priority', true)
+  }
+}
+
+/**
+ * Concludes the notification lifecycle on the native window.
+ * If the island is unpinned and the user is not actively hovering over the island,
+ * the window is smoothly hidden again without intercepting any user clicks.
+ */
+export function hideNotificationWindow(): void {
+  activeNotificationType = null
+  isChargingNotificationActive = false
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const prefs = getPreferences()
+  if (prefs.isPinned || forceVisibleDebug) return
+
+  // Conclude notification: ensure the island is hidden and window is non-interactive
+  currentMode = 'hidden'
+  isHoverInWindowOrZone = false
+  mainWindow.setIgnoreMouseEvents(true, { forward: true })
+  mainWindow.webContents.send('island:mode-changed', 'hidden')
+  mainWindow.hide()
+  console.log('[is-delulu:window] Native window hidden after notification finished')
+}
+
+export function showChargingNotificationWindow(): void {
+  showNotificationWindow('charging')
+}
+
+export function hideChargingNotificationWindow(): void {
+  hideNotificationWindow()
 }
 
 export function showIslandWindow(targetMode: IslandMode = 'collapsed'): void {
@@ -234,7 +341,7 @@ export function showIslandWindow(targetMode: IslandMode = 'collapsed'): void {
 
 export function hideIslandWindow(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
-  if (forceVisibleDebug) return
+  if (forceVisibleDebug || isNotificationOngoing()) return
   const prefs = getPreferences()
   if (prefs.isPinned) return // Respect pinned state
 
@@ -242,7 +349,13 @@ export function hideIslandWindow(): void {
   mainWindow.setIgnoreMouseEvents(true, { forward: true })
   mainWindow.webContents.send('island:mode-changed', 'hidden')
   setTimeout(() => {
-    if (currentMode === 'hidden' && mainWindow && !mainWindow.isDestroyed() && !forceVisibleDebug) {
+    if (
+      currentMode === 'hidden' &&
+      mainWindow &&
+      !mainWindow.isDestroyed() &&
+      !forceVisibleDebug &&
+      !isNotificationOngoing()
+    ) {
       mainWindow.hide()
     }
   }, 400)
@@ -262,6 +375,16 @@ export function startActivationMonitor(): void {
     if (!mainWindow || mainWindow.isDestroyed()) return
 
     const prefs = getPreferences()
+    if (isNotificationOngoing()) {
+      // While a notification is playing, the native window must remain visible
+      // and click-through, but we must NOT trigger normal hover activation or surface tracking.
+      if (!mainWindow.isVisible()) {
+        mainWindow.showInactive()
+        mainWindow.setIgnoreMouseEvents(true, { forward: true })
+      }
+      return
+    }
+
     if (prefs.isPinned || forceVisibleDebug) {
       // Pinned/Debug: keep visible
       if (!mainWindow.isVisible()) {

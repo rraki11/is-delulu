@@ -10,7 +10,8 @@ import {
   DesktopRoutine,
   UserPreferences,
   DebugStatus,
-  AccentPalette
+  AccentPalette,
+  BatteryState
 } from '../shared/types'
 
 const isDeluluAPI: IsDeluluAPI = {
@@ -179,6 +180,83 @@ const isDeluluAPI: IsDeluluAPI = {
     ipcRenderer.on('theme:accent-updated', handler)
     return () => {
       ipcRenderer.removeListener('theme:accent-updated', handler)
+    }
+  },
+
+  // Battery & Charging Notification
+  getBatteryState: (): Promise<BatteryState> => {
+    return ipcRenderer.invoke('battery:get-state')
+  },
+  onBatteryStateUpdate: (callback: (state: BatteryState) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, state: BatteryState): void => {
+      callback(state)
+    }
+    ipcRenderer.on('battery:update', handler)
+    return () => {
+      ipcRenderer.removeListener('battery:update', handler)
+    }
+  },
+  onChargingTriggered: (callback: (state: BatteryState) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, state: BatteryState): void => {
+      callback(state)
+    }
+    ipcRenderer.on('battery:charging-started', handler)
+    return () => {
+      ipcRenderer.removeListener('battery:charging-started', handler)
+    }
+  },
+  onChargingPriority: (callback: () => void): (() => void) => {
+    const handler = (): void => {
+      callback()
+    }
+    ipcRenderer.on('island:charging-priority', handler)
+    return () => {
+      ipcRenderer.removeListener('island:charging-priority', handler)
+    }
+  },
+  onEnergySaverChanged: (
+    callback: (data: { mode: 'on' | 'off'; threshold: number | null }) => void
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      data: { mode: 'on' | 'off'; threshold: number | null }
+    ): void => {
+      callback(data)
+    }
+    ipcRenderer.on('battery:energy-saver-changed', handler)
+    return () => {
+      ipcRenderer.removeListener('battery:energy-saver-changed', handler)
+    }
+  },
+  notifyChargingStarted: (): Promise<void> => {
+    return ipcRenderer.invoke('battery:charging-started')
+  },
+  notifyChargingEnded: (): Promise<void> => {
+    return ipcRenderer.invoke('battery:charging-ended')
+  },
+  notifyNotificationStarted: (type: 'charging' | 'energy_saver' | 'low_battery'): Promise<void> => {
+    return ipcRenderer.invoke('battery:notification-started', type)
+  },
+  notifyNotificationEnded: (): Promise<void> => {
+    return ipcRenderer.invoke('battery:notification-ended')
+  },
+
+  getWelcomeShown: (): Promise<boolean> => {
+    return ipcRenderer.invoke('island:get-welcome-shown')
+  },
+  checkWelcome: (): Promise<{ shouldWelcome: boolean }> => {
+    return ipcRenderer.invoke('island:check-welcome')
+  },
+  markWelcomeShown: (): Promise<void> => {
+    return ipcRenderer.invoke('island:mark-welcome-shown')
+  },
+  onLifecycleEvent: (callback: (evt: { type: 'startup' | 'resume' }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, evt: { type: 'startup' | 'resume' }): void => {
+      callback(evt)
+    }
+    ipcRenderer.on('island:lifecycle-event', handler)
+    return () => {
+      ipcRenderer.removeListener('island:lifecycle-event', handler)
     }
   },
 

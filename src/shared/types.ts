@@ -37,6 +37,19 @@ export interface UserPreferences {
   manualAccentColor: string
 }
 
+export interface BatteryState {
+  percent: number | null
+  isCharging: boolean | null
+  isFullyCharged: boolean | null
+  isOnAC?: boolean | null
+  /** Whether Windows Energy Saver is active */
+  isEnergySaver?: boolean | null
+  /** User-configured automatic Energy Saver threshold (e.g. 50), or null if not detected */
+  energySaverThreshold?: number | null
+  /** Minutes of discharge runtime remaining (only valid when discharging) */
+  minutesRemaining: number | null
+}
+
 export interface SystemStats {
   cpuUsage: number // 0 - 100
   memoryUsedGb: number
@@ -254,6 +267,23 @@ export interface IsDeluluAPI {
   // Dynamic Wallpaper & Accent Theme
   getAccentPalette: () => Promise<AccentPalette>
   onAccentPaletteChanged: (callback: (palette: AccentPalette) => void) => () => void
+
+  // Battery & Notification System
+  getBatteryState: () => Promise<BatteryState>
+  onBatteryStateUpdate: (callback: (state: BatteryState) => void) => () => void
+  onChargingTriggered?: (callback: (state: BatteryState) => void) => () => void
+  onChargingPriority?: (callback: () => void) => () => void
+  onEnergySaverChanged?: (
+    callback: (data: { mode: 'on' | 'off'; threshold: number | null }) => void
+  ) => () => void
+  notifyChargingStarted?: () => Promise<void>
+  notifyChargingEnded?: () => Promise<void>
+  notifyNotificationStarted?: (type: 'charging' | 'energy_saver' | 'low_battery') => Promise<void>
+  notifyNotificationEnded?: () => Promise<void>
+  getWelcomeShown?: () => Promise<boolean>
+  checkWelcome?: () => Promise<{ shouldWelcome: boolean }>
+  markWelcomeShown?: () => Promise<void>
+  onLifecycleEvent?: (callback: (evt: { type: 'startup' | 'resume' }) => void) => () => void
 
   // Diagnostics & Debug
   toggleForceVisibleDebug: () => Promise<boolean>

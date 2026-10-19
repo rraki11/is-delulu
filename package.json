@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build && node -e \"const fs = require('fs'); fs.mkdirSync('out/main/services', { recursive: true }); fs.copyFileSync('src/main/services/gsmtc-daemon.ps1', 'out/main/services/gsmtc-daemon.ps1');\"",
+    "build": "electron-vite build && node -e \"const fs = require('fs'); fs.mkdirSync('out/main/services', { recursive: true }); fs.copyFileSync('src/main/services/gsmtc-daemon.ps1', 'out/main/services/gsmtc-daemon.ps1'); fs.copyFileSync('src/main/services/battery-daemon.ps1', 'out/main/services/battery-daemon.ps1');\"",
     "typecheck": "tsc --noEmit",
     "preview": "electron-vite preview"
   },

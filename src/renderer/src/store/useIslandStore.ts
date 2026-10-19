@@ -8,6 +8,7 @@ import {
   DesktopRoutine,
   UserPreferences,
   AccentPalette,
+  BatteryState,
   DEFAULT_ROUTINES
 } from '../shared'
 
@@ -25,6 +26,7 @@ interface IslandState {
   theme: 'light' | 'dark'
   accentPalette: AccentPalette | null
   isHovered: boolean
+  batteryState: BatteryState | null
 
   setMode: (mode: IslandMode) => void
   setActiveTab: (tab: ExpandedTab) => void
@@ -39,10 +41,11 @@ interface IslandState {
   setTheme: (theme: 'light' | 'dark') => void
   setAccentPalette: (palette: AccentPalette) => void
   setIsHovered: (hovered: boolean) => void
+  setBatteryState: (state: BatteryState) => void
 }
 
 export const useIslandStore = create<IslandState>((set) => ({
-  mode: 'collapsed',
+  mode: 'hidden',
   activeTab: 'launcher',
   searchQuery: '',
   isAlwaysOnTop: true,
@@ -55,6 +58,7 @@ export const useIslandStore = create<IslandState>((set) => ({
   theme: 'dark',
   accentPalette: null,
   isHovered: false,
+  batteryState: null,
 
   setMode: (mode) => set({ mode }),
   setActiveTab: (activeTab) => set({ activeTab }),
@@ -79,7 +83,8 @@ export const useIslandStore = create<IslandState>((set) => ({
     })),
   setTheme: (theme) => set({ theme }),
   setAccentPalette: (accentPalette) => set({ accentPalette }),
-  setIsHovered: (isHovered) => set({ isHovered })
+  setIsHovered: (isHovered) => set({ isHovered }),
+  setBatteryState: (batteryState) => set({ batteryState })
 }))
 
 if (typeof window !== 'undefined') {
