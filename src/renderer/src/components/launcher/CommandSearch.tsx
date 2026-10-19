@@ -204,13 +204,13 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                       height: '28px',
                       borderRadius: '8px',
                       backgroundColor: isSelected
-                        ? 'var(--accent-glow)'
+                        ? 'var(--search-item-icon-bg)'
                         : 'var(--icon-container-bg)',
                       boxShadow: isSelected ? 'none' : 'var(--icon-container-shadow)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: isSelected ? 'var(--accent)' : 'var(--text-secondary)'
+                      color: isSelected ? 'var(--search-item-icon-color)' : 'var(--text-secondary)'
                     }}
                   >
                     <IconBadge name={item.icon} size={15} />

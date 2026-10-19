@@ -612,14 +612,20 @@ html, body {
 .island-gradient-stage.expanded .island-grad-orb--secondary { opacity: 0.55; }
 .island-gradient-stage.expanded .island-grad-orb--highlight { opacity: 0.42; }
 
-/* Center-darkening veil on expanded panel for dark theme text readability */
+/* Dark theme restrained orb opacities on expanded panel */
+[data-theme="dark"] .island-gradient-stage.expanded .island-grad-orb--primary   { opacity: 0.50; }
+[data-theme="dark"] .island-gradient-stage.expanded .island-grad-orb--secondary { opacity: 0.40; }
+[data-theme="dark"] .island-gradient-stage.expanded .island-grad-orb--highlight { opacity: 0.30; }
+
+/* Midnight navy subtle center diffusion on expanded panel for dark theme depth and text readability */
 [data-theme="dark"] .island-gradient-stage.expanded::after {
   content: '';
   position: absolute;
   inset: 0;
   background: radial-gradient(
-    ellipse 55% 60% at 50% 50%,
-    rgba(0, 0, 0, 0.30) 0%,
+    ellipse 65% 65% at 50% 50%,
+    rgba(15, 20, 36, 0.45) 0%,
+    rgba(11, 15, 29, 0.20) 60%,
     transparent         100%
   );
   pointer-events: none;

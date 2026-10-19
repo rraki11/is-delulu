@@ -78,7 +78,7 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
           transition: 'background 0.15s ease'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+          e.currentTarget.style.backgroundColor = 'var(--hover-subtle)'
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent'

@@ -58,7 +58,7 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
             key={item.id}
             whileHover={{
               backgroundColor: 'var(--bg-card-hover)',
-              borderColor: 'var(--accent-border)',
+              borderColor: 'var(--border-card-hover)',
               y: -1
             }}
             whileTap={{ scale: 0.97 }}

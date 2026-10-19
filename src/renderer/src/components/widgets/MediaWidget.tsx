@@ -681,11 +681,11 @@ export const MediaWidget: React.FC = () => {
 
   /* Live palette — updates whenever accent mode or wallpaper changes */
   const palette: PaletteTokens = {
-    primary: accentPalette?.primary ?? '#BBFF00',
-    secondary: accentPalette?.secondary ?? '#8B5CF6',
-    highlight: accentPalette?.highlight ?? '#00F0FF',
-    glow: accentPalette?.glow ?? 'rgba(187,255,0,0.25)',
-    subtle: accentPalette?.subtle ?? 'rgba(187,255,0,0.08)'
+    primary: accentPalette?.primary && accentPalette.primary !== '#BBFF00' ? accentPalette.primary : '#60A5FA',
+    secondary: accentPalette?.secondary ?? '#818CF8',
+    highlight: accentPalette?.highlight ?? '#A78BFA',
+    glow: accentPalette?.glow ?? 'rgba(96, 165, 250, 0.16)',
+    subtle: accentPalette?.subtle ?? 'rgba(96, 165, 250, 0.08)'
   }
 
   /* Build unified source list — preserves ALL simultaneous sessions */
