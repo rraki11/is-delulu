@@ -124,14 +124,14 @@ export const HandwrittenGreeting: React.FC<HandwrittenGreetingProps> = ({
         className="handwriting-reveal-text"
         style={{
           fontFamily: "'Caveat', cursive, 'SF Pro Display', system-ui, sans-serif",
-          fontSize: '15px',
+          fontSize: '22px',
           fontWeight: 500,
           color: 'rgba(244, 245, 240, 0.95)',
           letterSpacing: '0.01em',
-          lineHeight: 1,
+          lineHeight: 1.1,
           whiteSpace: 'nowrap',
           userSelect: 'none',
-          maxWidth: '156px',
+          maxWidth: '180px',
           textAlign: 'center',
           overflow: 'hidden',
           textOverflow: 'ellipsis'
@@ -150,8 +150,8 @@ export const HandwrittenGreeting: React.FC<HandwrittenGreetingProps> = ({
       aria-label={greeting}
       role="img"
       style={{
-        height: '21px',
-        maxWidth: '154px',
+        height: '29px',
+        maxWidth: '180px',
         width: 'auto',
         overflow: 'visible',
         display: 'block'
@@ -177,7 +177,7 @@ export const HandwrittenGreeting: React.FC<HandwrittenGreetingProps> = ({
             d={stroke.d}
             fill="none"
             stroke="rgba(244, 245, 240, 0.95)"
-            strokeWidth={38}
+            strokeWidth={40}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={stroke.len}

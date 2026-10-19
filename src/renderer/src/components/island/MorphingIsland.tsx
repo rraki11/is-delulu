@@ -338,17 +338,41 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const isChargingExpanded = isChargingActive && chargingPhase === 'expanded'
   const isChargingExiting = isChargingActive && chargingPhase === 'exiting'
 
+  const isGreetingActive =
+    welcomeActive &&
+    (welcomeStage === 'writing' ||
+      welcomeStage === 'holding' ||
+      welcomeStage === 'fading')
+
+  const isGreetingTransition =
+    welcomeActive &&
+    (welcomeStage === 'writing' ||
+      welcomeStage === 'holding' ||
+      welcomeStage === 'fading' ||
+      welcomeStage === 'pausing')
+
+  const greetingWidth = greeting === 'hello' ? 212 : 160
+  const greetingHeight = 42
+
   const targetWidth = isExpanded
     ? WINDOW_CONFIG.panel.width
     : isChargingExpanded
     ? 320
+    : isGreetingActive
+    ? greetingWidth
     : WINDOW_CONFIG.pill.width
 
   const targetHeight = isExpanded
     ? WINDOW_CONFIG.panel.height
-    : isChargingExpanded
-    ? 42
+    : isChargingExpanded || isGreetingActive
+    ? greetingHeight
     : WINDOW_CONFIG.pill.height
+
+  const targetBorderRadius = isExpanded
+    ? '0px 0px 22px 22px'
+    : targetHeight >= 42
+    ? '0px 0px 21px 21px'
+    : '0px 0px 17px 17px'
 
   const integerLeft = Math.floor((windowWidth - targetWidth) / 2)
 
@@ -368,7 +392,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         y: { duration: 0.42, ease: [0.32, 0.72, 0, 1] },
         opacity: { duration: 0.36, ease: 'easeOut' }
       }
-    : isChargingActive
+    : isChargingActive || isGreetingTransition
     ? PILL_SPRING
     : {
         duration: isExpanded ? 0.38 : 0.32,
@@ -386,8 +410,12 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         animate={{
           left: integerLeft - 18,
           width: targetWidth + 36,
-          height: (isExpanded ? WINDOW_CONFIG.panel.height : isChargingExpanded ? 42 : WINDOW_CONFIG.pill.height) + 16,
-          borderRadius: isExpanded ? '0px 0px 30px 30px' : isChargingExpanded ? '0px 0px 28px 28px' : '0px 0px 24px 24px',
+          height: targetHeight + 16,
+          borderRadius: isExpanded
+            ? '0px 0px 30px 30px'
+            : targetHeight >= 42
+            ? '0px 0px 28px 28px'
+            : '0px 0px 24px 24px',
           y: islandY,
           opacity: isHidden || isExpanded || isChargingExiting ? 0 : islandOpacity
         }}
@@ -428,11 +456,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           left: integerLeft,
           width: targetWidth,
           height: targetHeight,
-          borderRadius: isExpanded
-            ? '0px 0px 22px 22px'
-            : isChargingExpanded
-            ? '0px 0px 20px 20px'
-            : '0px 0px 17px 17px',
+          borderRadius: targetBorderRadius,
           backgroundColor: isExpanded ? 'var(--bg-panel)' : 'var(--bg-pill)',
           y: islandY,
           opacity: islandOpacity
@@ -521,7 +545,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               top: 0,
               left: 0,
               right: 0,
-              height: `${isChargingExpanded ? 42 : WINDOW_CONFIG.pill.height}px`,
+              bottom: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
