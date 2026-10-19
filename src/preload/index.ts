@@ -11,7 +11,8 @@ import {
   UserPreferences,
   DebugStatus,
   AccentPalette,
-  BatteryState
+  BatteryState,
+  WallpaperItem
 } from '../shared/types'
 
 const isDeluluAPI: IsDeluluAPI = {
@@ -181,6 +182,44 @@ const isDeluluAPI: IsDeluluAPI = {
     return () => {
       ipcRenderer.removeListener('theme:accent-updated', handler)
     }
+  },
+
+  // Wallpaper Gallery
+  selectWallpaperFolder: (): Promise<{
+    canceled: boolean
+    folderPath?: string
+    images?: WallpaperItem[]
+    error?: string
+  }> => {
+    return ipcRenderer.invoke('wallpaper:select-folder')
+  },
+  getWallpaperImages: (
+    folderPath?: string
+  ): Promise<{
+    success: boolean
+    folderPath: string | null
+    images: WallpaperItem[]
+    error?: string
+  }> => {
+    return ipcRenderer.invoke('wallpaper:get-images', folderPath)
+  },
+  getWallpaperThumbnail: (
+    filePath: string
+  ): Promise<{
+    dataUrl: string | null
+  }> => {
+    return ipcRenderer.invoke('wallpaper:get-thumbnail', filePath)
+  },
+  applyDesktopWallpaper: (
+    filePath: string
+  ): Promise<{
+    success: boolean
+    message?: string
+  }> => {
+    return ipcRenderer.invoke('wallpaper:apply-desktop', filePath)
+  },
+  getCurrentDesktopWallpaper: (): Promise<string | null> => {
+    return ipcRenderer.invoke('wallpaper:get-current-desktop')
   },
 
   // Battery & Charging Notification

@@ -55,6 +55,13 @@ import {
   getBatteryState,
   requestBatteryRefresh
 } from './services/battery'
+import {
+  selectWallpaperFolder,
+  getSavedWallpaperImages,
+  getWallpaperThumbnail,
+  applyWallpaperAsDesktop,
+  getCurrentDesktopWallpaper
+} from './services/wallpaperGallery'
 import { IslandMode, UserPreferences, MediaControlAction } from '../shared/types'
 
 app.setName('is-delulu')
@@ -457,6 +464,28 @@ if (!gotTheLock) {
 
   ipcMain.handle('routines:toggle', (_event, routineId: string) => {
     return toggleRoutine(routineId)
+  })
+
+  // Wallpaper Gallery
+  ipcMain.handle('wallpaper:select-folder', async () => {
+    return selectWallpaperFolder(mainWindow)
+  })
+
+  ipcMain.handle('wallpaper:get-images', async (_event, folderPath?: string) => {
+    return getSavedWallpaperImages(folderPath)
+  })
+
+  ipcMain.handle('wallpaper:get-thumbnail', async (_event, filePath: string) => {
+    const dataUrl = getWallpaperThumbnail(filePath)
+    return { dataUrl }
+  })
+
+  ipcMain.handle('wallpaper:apply-desktop', async (_event, filePath: string) => {
+    return applyWallpaperAsDesktop(filePath)
+  })
+
+  ipcMain.handle('wallpaper:get-current-desktop', () => {
+    return getCurrentDesktopWallpaper()
   })
 
   // Welcome Lifecycle

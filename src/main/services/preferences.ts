@@ -9,7 +9,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   appearance: 'system',
   isPinned: false,
   accentMode: 'wallpaper',
-  manualAccentColor: '#8B5CF6'
+  manualAccentColor: '#8B5CF6',
+  wallpaperFolderPath: '',
+  selectedWallpaperPath: ''
 }
 
 let cachedPreferences: UserPreferences = { ...DEFAULT_PREFERENCES }
@@ -37,7 +39,9 @@ export function initPreferences(): UserPreferences {
           : 'wallpaper',
         manualAccentColor: typeof parsed.manualAccentColor === 'string' && /^#[0-9A-Fa-f]{3,8}$/.test(parsed.manualAccentColor)
           ? parsed.manualAccentColor
-          : '#8B5CF6'
+          : '#8B5CF6',
+        wallpaperFolderPath: typeof parsed.wallpaperFolderPath === 'string' ? parsed.wallpaperFolderPath : '',
+        selectedWallpaperPath: typeof parsed.selectedWallpaperPath === 'string' ? parsed.selectedWallpaperPath : ''
       }
     } else {
       savePreferencesToDisk(DEFAULT_PREFERENCES)
@@ -96,6 +100,12 @@ export function updatePreferences(partial: Partial<UserPreferences>): UserPrefer
     !/^#[0-9A-Fa-f]{3,8}$/.test(cachedPreferences.manualAccentColor)
   ) {
     cachedPreferences.manualAccentColor = '#8B5CF6'
+  }
+  if (typeof cachedPreferences.wallpaperFolderPath !== 'string') {
+    cachedPreferences.wallpaperFolderPath = ''
+  }
+  if (typeof cachedPreferences.selectedWallpaperPath !== 'string') {
+    cachedPreferences.selectedWallpaperPath = ''
   }
 
   savePreferencesToDisk(cachedPreferences)

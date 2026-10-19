@@ -8,7 +8,7 @@ import { CalendarWidget } from '../widgets/CalendarWidget'
 import { SystemWidget } from '../widgets/SystemWidget'
 import { ClipboardWidget } from '../widgets/ClipboardWidget'
 import { MediaWidget } from '../widgets/MediaWidget'
-import { RoutinesWidget } from '../widgets/RoutinesWidget'
+import { WallpaperWidget } from '../widgets/WallpaperWidget'
 import { SettingsWidget } from '../settings/SettingsWidget'
 import { useIslandStore } from '../../store/useIslandStore'
 import { WINDOW_CONFIG } from '../../shared'
@@ -97,7 +97,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({ onCollapse }) => {
 
             {activeTab === 'media' && <MediaWidget />}
 
-            {activeTab === 'routines' && <RoutinesWidget />}
+            {activeTab === 'routines' && <WallpaperWidget />}
 
             {activeTab === 'settings' && <SettingsWidget />}
           </motion.div>

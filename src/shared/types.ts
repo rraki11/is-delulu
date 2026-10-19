@@ -28,6 +28,15 @@ export interface AccentPalette {
   sourceWallpaper?: string
 }
 
+export interface WallpaperItem {
+  id: string
+  name: string
+  fileName: string
+  filePath: string
+  fileSize: number
+  modifiedTime: number
+}
+
 export interface UserPreferences {
   userName: string
   clockFormat: ClockFormat
@@ -35,6 +44,8 @@ export interface UserPreferences {
   isPinned: boolean
   accentMode: AccentThemeMode
   manualAccentColor: string
+  wallpaperFolderPath?: string
+  selectedWallpaperPath?: string
 }
 
 export interface BatteryState {
@@ -267,6 +278,28 @@ export interface IsDeluluAPI {
   // Dynamic Wallpaper & Accent Theme
   getAccentPalette: () => Promise<AccentPalette>
   onAccentPaletteChanged: (callback: (palette: AccentPalette) => void) => () => void
+
+  // Wallpaper Gallery
+  selectWallpaperFolder: () => Promise<{
+    canceled: boolean
+    folderPath?: string
+    images?: WallpaperItem[]
+    error?: string
+  }>
+  getWallpaperImages: (folderPath?: string) => Promise<{
+    success: boolean
+    folderPath: string | null
+    images: WallpaperItem[]
+    error?: string
+  }>
+  getWallpaperThumbnail: (filePath: string) => Promise<{
+    dataUrl: string | null
+  }>
+  applyDesktopWallpaper: (filePath: string) => Promise<{
+    success: boolean
+    message?: string
+  }>
+  getCurrentDesktopWallpaper: () => Promise<string | null>
 
   // Battery & Notification System
   getBatteryState: () => Promise<BatteryState>

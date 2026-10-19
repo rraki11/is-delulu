@@ -6,7 +6,7 @@ import {
   Cpu,
   ClipboardList,
   Music,
-  Sparkles,
+  Wallpaper,
   Settings
 } from 'lucide-react'
 import { ExpandedTab } from '../../shared'
@@ -17,7 +17,7 @@ export const TABS: { id: ExpandedTab; label: string; icon: React.ElementType }[]
   { id: 'system',    label: 'System',    icon: Cpu },
   { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
   { id: 'media',     label: 'Media',     icon: Music },
-  { id: 'routines',  label: 'Routines',  icon: Sparkles },
+  { id: 'routines',  label: 'Wallpapers', icon: Wallpaper },
   { id: 'settings',  label: 'Settings',  icon: Settings }
 ]
 
