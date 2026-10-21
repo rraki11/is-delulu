@@ -36,6 +36,38 @@ function createClipboardItem(text: string): ClipboardItem {
   }
 }
 
+let currentPollIntervalMs = 1500
+
+function checkClipboard(): void {
+  try {
+    const current = clipboard.readText()
+    if (current && current !== lastText && current.trim().length > 0) {
+      lastText = current
+      const newItem = createClipboardItem(current)
+      // Deduplicate
+      clipboardHistory = [
+        newItem,
+        ...clipboardHistory.filter((item) => item.text !== current)
+      ].slice(0, 50)
+
+      // Notify listeners
+      changeListeners.forEach((fn) => fn(clipboardHistory))
+    }
+  } catch {
+    // Ignore polling errors
+  }
+}
+
+export function setClipboardPollInterval(intervalMs: number): void {
+  const safeMs = Math.max(300, intervalMs)
+  if (currentPollIntervalMs === safeMs) return
+  currentPollIntervalMs = safeMs
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = setInterval(checkClipboard, currentPollIntervalMs)
+  }
+}
+
 export function startClipboardMonitor(): void {
   try {
     const current = clipboard.readText()
@@ -47,26 +79,9 @@ export function startClipboardMonitor(): void {
     // Ignore initial read error
   }
 
-  // Poll clipboard every 800ms
-  pollInterval = setInterval(() => {
-    try {
-      const current = clipboard.readText()
-      if (current && current !== lastText && current.trim().length > 0) {
-        lastText = current
-        const newItem = createClipboardItem(current)
-        // Deduplicate
-        clipboardHistory = [
-          newItem,
-          ...clipboardHistory.filter((item) => item.text !== current)
-        ].slice(0, 50)
-
-        // Notify listeners
-        changeListeners.forEach((fn) => fn(clipboardHistory))
-      }
-    } catch {
-      // Ignore polling errors
-    }
-  }, 800)
+  // Poll clipboard gently when idle/collapsed, fast when viewing
+  if (pollInterval) clearInterval(pollInterval)
+  pollInterval = setInterval(checkClipboard, currentPollIntervalMs)
 }
 
 export function stopClipboardMonitor(): void {

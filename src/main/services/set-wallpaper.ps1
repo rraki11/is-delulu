@@ -25,4 +25,8 @@ if (-not ([System.Management.Automation.PSTypeName]'DesktopWallpaper').Type) {
 # 0x0014 = SPI_SETDESKWALLPAPER
 # 0x01 | 0x02 = SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
 $result = [DesktopWallpaper]::SystemParametersInfo(0x0014, 0, $ImagePath, 0x03)
+if ($result -eq 0) {
+    Write-Error "SystemParametersInfo failed to apply wallpaper: $ImagePath"
+    exit 1
+}
 Write-Output "Result: $result"

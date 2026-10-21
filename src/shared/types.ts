@@ -28,6 +28,26 @@ export interface AccentPalette {
   sourceWallpaper?: string
 }
 
+export interface PerfMilestone {
+  name: string
+  timestamp: number
+  elapsedSinceStartMs: number
+  elapsedSincePrevMs: number
+  metadata?: Record<string, unknown>
+}
+
+export interface AnimationMetrics {
+  name: string
+  durationMs: number
+  totalFrames: number
+  avgFps: number
+  longFrames: number
+  droppedFrames: number
+  maxFrameDeltaMs: number
+  p95FrameDeltaMs: number
+  frameDeltas: number[]
+}
+
 export interface WallpaperItem {
   id: string
   name: string
@@ -300,6 +320,7 @@ export interface IsDeluluAPI {
     message?: string
   }>
   getCurrentDesktopWallpaper: () => Promise<string | null>
+  getWallpaperTransitionState?: () => Promise<string>
 
   // Battery & Notification System
   getBatteryState: () => Promise<BatteryState>
@@ -318,6 +339,12 @@ export interface IsDeluluAPI {
   markWelcomeShown?: () => Promise<void>
   onStartWelcome?: (callback: () => void) => () => void
   onLifecycleEvent?: (callback: (evt: { type: 'startup' | 'resume' }) => void) => () => void
+
+  // Performance & Handshake
+  notifyRendererReady?: () => Promise<void>
+  getPerfMilestones?: () => Promise<PerfMilestone[]>
+  getMainStartTime?: () => number
+  recordAnimationMetrics?: (metrics: AnimationMetrics) => Promise<void>
 
   // Diagnostics & Debug
   toggleForceVisibleDebug: () => Promise<boolean>

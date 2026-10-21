@@ -2,16 +2,35 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence, type Transition } from 'motion/react'
 import { IslandHeader } from './IslandHeader'
 import { NavigationTabBar } from './NavigationTabBar'
-import { CommandSearch } from '../launcher/CommandSearch'
-import { ShortcutGrid } from '../launcher/ShortcutGrid'
-import { CalendarWidget } from '../widgets/CalendarWidget'
-import { SystemWidget } from '../widgets/SystemWidget'
-import { ClipboardWidget } from '../widgets/ClipboardWidget'
-import { MediaWidget } from '../widgets/MediaWidget'
-import { WallpaperWidget } from '../widgets/WallpaperWidget'
-import { SettingsWidget } from '../settings/SettingsWidget'
+
+// Lazy-load secondary dashboard widgets so the initial bundle for the collapsed pill is ultra-lightweight
+const CommandSearch = React.lazy(() =>
+  import('../launcher/CommandSearch').then((m) => ({ default: m.CommandSearch }))
+)
+const ShortcutGrid = React.lazy(() =>
+  import('../launcher/ShortcutGrid').then((m) => ({ default: m.ShortcutGrid }))
+)
+const CalendarWidget = React.lazy(() =>
+  import('../widgets/CalendarWidget').then((m) => ({ default: m.CalendarWidget }))
+)
+const SystemWidget = React.lazy(() =>
+  import('../widgets/SystemWidget').then((m) => ({ default: m.SystemWidget }))
+)
+const ClipboardWidget = React.lazy(() =>
+  import('../widgets/ClipboardWidget').then((m) => ({ default: m.ClipboardWidget }))
+)
+const MediaWidget = React.lazy(() =>
+  import('../widgets/MediaWidget').then((m) => ({ default: m.MediaWidget }))
+)
+const WallpaperWidget = React.lazy(() =>
+  import('../widgets/WallpaperWidget').then((m) => ({ default: m.WallpaperWidget }))
+)
+const SettingsWidget = React.lazy(() =>
+  import('../settings/SettingsWidget').then((m) => ({ default: m.SettingsWidget }))
+)
+
 import { useIslandStore } from '../../store/useIslandStore'
-import { IslandMode, WINDOW_CONFIG, BatteryState } from '../../shared'
+import { IslandMode, WINDOW_CONFIG, BatteryState, animationProfiler } from '../../shared'
 import { ChargingPhase } from '../../hooks/useChargingNotification'
 import { ChargingContent, PILL_SPRING } from './ChargingPill'
 import {
@@ -130,6 +149,14 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const greetingRef = React.useRef(greeting)
   greetingRef.current = greeting
   const entranceCompletedRef = React.useRef(false)
+  const prevModeRef = React.useRef(mode)
+
+  React.useEffect(() => {
+    if (prevModeRef.current !== mode) {
+      animationProfiler.start(`island_${prevModeRef.current}_to_${mode}`)
+      prevModeRef.current = mode
+    }
+  }, [mode])
 
   const clearWelcomeTimers = React.useCallback(() => {
     welcomeTimersRef.current.forEach((t) => clearTimeout(t))
@@ -161,6 +188,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     }
 
     setWelcomeStage('entering')
+    animationProfiler.start('welcome_entrance')
     console.log(
       `[ISLAND ${Date.now()}] [is-delulu:entrance] Top-down entrance animation starts (y: -50 -> 0, opacity: 0 -> 1).`
     )
@@ -197,6 +225,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     const sid = welcomeSessionIdRef.current
     const chosenGreeting = greeting
     const writingDuration = getWritingDuration(chosenGreeting)
+    animationProfiler.start('welcome_handwriting')
     console.log(
       `[ISLAND ${Date.now()}] [is-delulu:greeting] Handwriting animation started for "${chosenGreeting}" (${writingDuration}ms).`
     )
@@ -204,6 +233,10 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     // 1. Handwriting animation completes
     const tWrite = setTimeout(() => {
       if (welcomeSessionIdRef.current !== sid) return
+      const handMetrics = animationProfiler.stop()
+      if (handMetrics && window.isDelulu?.recordAnimationMetrics) {
+        window.isDelulu.recordAnimationMetrics(handMetrics)
+      }
       console.log(
         `[ISLAND ${Date.now()}] [is-delulu:greeting] Greeting handwriting complete. Holding for user reading (1000ms).`
       )
@@ -433,6 +466,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
       <motion.div
         key={`island-surface-${welcomeKey}`}
         id="island-surface"
+        className={isExpanded ? 'expanded' : ''}
         role={mode === 'collapsed' ? 'button' : undefined}
         tabIndex={mode === 'collapsed' ? 0 : undefined}
         onClick={mode === 'collapsed' ? onExpand : undefined}
@@ -460,6 +494,11 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         }}
         transition={islandTransition}
         onAnimationComplete={() => {
+          const modeMetrics = animationProfiler.stop()
+          if (modeMetrics && window.isDelulu?.recordAnimationMetrics) {
+            window.isDelulu.recordAnimationMetrics(modeMetrics)
+          }
+
           if (welcomeActiveRef.current && welcomeStageRef.current === 'entering') {
             if (!entranceCompletedRef.current) {
               entranceCompletedRef.current = true
@@ -664,19 +703,36 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
                 padding: '12px 16px 16px 16px'
               }}
             >
-              {activeTab === 'launcher' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <CommandSearch onExecuteAction={handleExecuteAction} />
-                  <ShortcutGrid onLaunch={handleExecuteAction} />
-                </div>
-              )}
+              <React.Suspense
+                fallback={
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '240px',
+                      color: 'var(--text-muted)',
+                      fontSize: '12px'
+                    }}
+                  >
+                    <div className="pulse-animation">Loading...</div>
+                  </div>
+                }
+              >
+                {activeTab === 'launcher' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <CommandSearch onExecuteAction={handleExecuteAction} />
+                    <ShortcutGrid onLaunch={handleExecuteAction} />
+                  </div>
+                )}
 
-              {activeTab === 'calendar' && <CalendarWidget />}
-              {activeTab === 'system' && <SystemWidget />}
-              {activeTab === 'clipboard' && <ClipboardWidget />}
-              {activeTab === 'media' && <MediaWidget />}
-              {activeTab === 'routines' && <WallpaperWidget />}
-              {activeTab === 'settings' && <SettingsWidget />}
+                {activeTab === 'calendar' && <CalendarWidget />}
+                {activeTab === 'system' && <SystemWidget />}
+                {activeTab === 'clipboard' && <ClipboardWidget />}
+                {activeTab === 'media' && <MediaWidget />}
+                {activeTab === 'routines' && <WallpaperWidget />}
+                {activeTab === 'settings' && <SettingsWidget />}
+              </React.Suspense>
             </div>
           </motion.div>
         )}

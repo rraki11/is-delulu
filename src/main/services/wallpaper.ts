@@ -1,12 +1,44 @@
-import { nativeImage } from 'electron'
+import { nativeImage, app } from 'electron'
 import { join } from 'path'
-import { existsSync, statSync, watch, FSWatcher } from 'fs'
-import { execSync } from 'child_process'
+import { existsSync, statSync, watch, FSWatcher, readFileSync, writeFileSync } from 'fs'
+import { exec } from 'child_process'
 import { AccentPalette, UserPreferences } from '../../shared/types'
 
 // Cache palette based on path and modified time
 let cachedKey = ''
 let cachedPalette: AccentPalette | null = null
+
+function getPaletteCacheFilePath(): string {
+  try {
+    return join(app.getPath('userData'), 'palette-cache.json')
+  } catch {
+    return ''
+  }
+}
+
+function loadPaletteCache(): void {
+  if (cachedPalette) return
+  try {
+    const p = getPaletteCacheFilePath()
+    if (p && existsSync(p)) {
+      const raw = readFileSync(p, 'utf-8')
+      const data = JSON.parse(raw)
+      if (data && data.key && data.palette) {
+        cachedKey = data.key
+        cachedPalette = data.palette
+      }
+    }
+  } catch {}
+}
+
+function savePaletteCache(key: string, palette: AccentPalette): void {
+  try {
+    const p = getPaletteCacheFilePath()
+    if (p) {
+      writeFileSync(p, JSON.stringify({ key, palette }), 'utf-8')
+    }
+  } catch {}
+}
 
 // Watcher and timer
 let themesWatcher: FSWatcher | null = null
@@ -157,29 +189,37 @@ export function generatePaletteFromHex(hex: string): AccentPalette {
   }
 }
 
-/**
- * Retrieves the current Windows desktop wallpaper file path
- */
-export function getWindowsWallpaperPath(): string | null {
-  // 1. Check registry
-  try {
-    const regOutput = execSync('reg query "HKCU\\Control Panel\\Desktop" /v WallPaper', {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore']
-    })
-    const match = regOutput.match(/WallPaper\s+REG_SZ\s+(.*)/i)
-    if (match && match[1]) {
-      const candidate = match[1].trim()
-      if (candidate && existsSync(candidate)) {
-        try {
-          const st = statSync(candidate)
-          if (st.size > 0) return candidate
-        } catch {}
+let cachedRegistryWallpaperPath: string | null = null
+let isRegistryQueryPending = false
+
+function triggerAsyncRegistryWallpaperCheck(): void {
+  if (isRegistryQueryPending) return
+  isRegistryQueryPending = true
+  exec('reg query "HKCU\\Control Panel\\Desktop" /v WallPaper', (err, stdout) => {
+    isRegistryQueryPending = false
+    if (!err && stdout) {
+      const match = stdout.match(/WallPaper\s+REG_SZ\s+(.*)/i)
+      if (match && match[1]) {
+        const candidate = match[1].trim()
+        if (candidate && existsSync(candidate)) {
+          try {
+            const st = statSync(candidate)
+            if (st.size > 0) {
+              cachedRegistryWallpaperPath = candidate
+            }
+          } catch {}
+        }
       }
     }
-  } catch {}
+  })
+}
 
-  // 2. Check TranscodedWallpaper in Themes directory
+/**
+ * Retrieves the current Windows desktop wallpaper file path
+ * Fast, non-blocking: checks TranscodedWallpaper first (0ms), then registry cache.
+ */
+export function getWindowsWallpaperPath(): string | null {
+  // 1. Check TranscodedWallpaper in Themes directory (instant file stat, 0ms)
   try {
     const appData = process.env.APPDATA || ''
     if (appData) {
@@ -190,6 +230,14 @@ export function getWindowsWallpaperPath(): string | null {
       }
     }
   } catch {}
+
+  // 2. Fall back to cached registry wallpaper path
+  if (cachedRegistryWallpaperPath && existsSync(cachedRegistryWallpaperPath)) {
+    return cachedRegistryWallpaperPath
+  }
+
+  // 3. Asynchronously trigger background query if not already cached
+  triggerAsyncRegistryWallpaperCheck()
 
   return null
 }
@@ -202,6 +250,8 @@ export function getWindowsWallpaperPath(): string | null {
 export function extractPaletteFromWallpaper(filePath: string): AccentPalette | null {
   try {
     if (!existsSync(filePath)) return null
+
+    loadPaletteCache()
 
     const st = statSync(filePath)
     const key = `${filePath}:${st.mtimeMs}`
@@ -376,6 +426,7 @@ export function extractPaletteFromWallpaper(filePath: string): AccentPalette | n
 
         cachedKey = key
         cachedPalette = palette
+        savePaletteCache(key, palette)
         return palette
       }
     }
@@ -397,6 +448,7 @@ export function extractPaletteFromWallpaper(filePath: string): AccentPalette | n
       }
       cachedKey = key
       cachedPalette = palette
+      savePaletteCache(key, palette)
       return palette
     }
 
@@ -449,6 +501,7 @@ export function extractPaletteFromWallpaper(filePath: string): AccentPalette | n
 
       cachedKey = key
       cachedPalette = palette
+      savePaletteCache(key, palette)
       return palette
     }
 
@@ -456,6 +509,7 @@ export function extractPaletteFromWallpaper(filePath: string): AccentPalette | n
     palette = getDefaultAccentPalette()
     cachedKey = key
     cachedPalette = palette
+    savePaletteCache(key, palette)
     return palette
   } catch (err) {
     console.warn('[WallpaperService] Extraction failed:', err)
@@ -465,6 +519,7 @@ export function extractPaletteFromWallpaper(filePath: string): AccentPalette | n
 
 /**
  * Resolves active palette based on user preferences (Wallpaper, Manual, or Default)
+ * Fast and non-blocking: resolves from in-memory or disk cache in 0ms.
  */
 export function resolveActivePalette(preferences?: Partial<UserPreferences>): AccentPalette {
   const mode = preferences?.accentMode || 'wallpaper'
@@ -477,23 +532,61 @@ export function resolveActivePalette(preferences?: Partial<UserPreferences>): Ac
     return getDefaultAccentPalette()
   }
 
-  // Wallpaper mode
+  // Wallpaper mode: check memory or disk cache first (0ms)
+  loadPaletteCache()
+
   const currentPath = getWindowsWallpaperPath()
   if (currentPath) {
+    try {
+      const st = statSync(currentPath)
+      const key = `${currentPath}:${st.mtimeMs}`
+      if (cachedPalette && cachedKey === key) {
+        return cachedPalette
+      }
+    } catch {}
+
     const extracted = extractPaletteFromWallpaper(currentPath)
     if (extracted) return extracted
+  }
+
+  if (cachedPalette) {
+    return cachedPalette
   }
 
   return getDefaultAccentPalette()
 }
 
+let isMonitorPaused = false
+
 /**
- * Starts automatic wallpaper monitoring and notifies listeners on change
+ * Temporarily pauses wallpaper monitoring to prevent heavy disk/CPU work during transitions
+ */
+export function pauseWallpaperMonitor(): void {
+  isMonitorPaused = true
+}
+
+/**
+ * Resumes wallpaper monitoring and updates last known path to avoid redundant re-extractions
+ */
+export function resumeWallpaperMonitor(skipPath?: string): void {
+  isMonitorPaused = false
+  if (skipPath) {
+    lastKnownPath = skipPath
+    try {
+      lastKnownMtime = statSync(skipPath).mtimeMs
+    } catch {}
+  }
+}
+
+/**
+ * Starts automatic wallpaper monitoring and notifies listeners on change.
+ * Defers initial check so cold-start rendering is never blocked.
  */
 export function startWallpaperMonitor(onUpdate: (palette: AccentPalette) => void): void {
   stopWallpaperMonitor()
 
   const checkWallpaper = (): void => {
+    if (isMonitorPaused) return
     try {
       const currentPath = getWindowsWallpaperPath()
       if (!currentPath) return
@@ -517,8 +610,8 @@ export function startWallpaperMonitor(onUpdate: (palette: AccentPalette) => void
     }
   }
 
-  // Initial check
-  checkWallpaper()
+  // Defer initial check slightly so startup window creation, paint, and welcome animation run at full FPS
+  setTimeout(checkWallpaper, 1200)
 
   // Watch Themes directory
   try {
@@ -527,15 +620,15 @@ export function startWallpaperMonitor(onUpdate: (palette: AccentPalette) => void
     if (existsSync(themesDir)) {
       themesWatcher = watch(themesDir, (_eventType, _fileName) => {
         // Debounce slightly to allow file writes to finish
-        setTimeout(checkWallpaper, 350)
+        setTimeout(checkWallpaper, 400)
       })
     }
   } catch (watchErr) {
     console.warn('[WallpaperService] Could not set up fs.watch on Themes dir:', watchErr)
   }
 
-  // Polling fallback every 4.5s
-  pollTimer = setInterval(checkWallpaper, 4500)
+  // Polling fallback every 12s (using lightweight statSync, zero execSync)
+  pollTimer = setInterval(checkWallpaper, 12000)
 }
 
 /**

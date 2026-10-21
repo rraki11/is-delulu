@@ -6,6 +6,7 @@ import { LowBatteryPill } from './components/island/LowBatteryPill'
 import { useIslandStore } from './store/useIslandStore'
 import { useIslandStateMachine } from './hooks/useIslandStateMachine'
 import { IslandMode, AccentPalette } from '../../shared/types'
+import { perfTracker } from '../../shared/perf'
 
 export const App: React.FC = () => {
   const {
@@ -27,6 +28,17 @@ export const App: React.FC = () => {
   const isIgnoringRef = useRef(true)
   const currentThemeRef = useRef<'light' | 'dark'>('dark')
   const currentPaletteRef = useRef<AccentPalette | null>(null)
+  const cachedSurfaceRectRef = useRef<{ left: number; right: number; top: number; bottom: number } | null>(null)
+
+  // Double-rAF handshake: signals to main process once the initial frame is rendered to display window with 0 blank frames
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        perfTracker.record('first_rendered_frame')
+        window.isDelulu?.notifyRendererReady?.()
+      })
+    })
+  }, [])
 
   // Coordinate click-through pass-through for transparent window regions
   const updateMouseHitTest = useCallback((isInsideIsland: boolean) => {
@@ -88,6 +100,7 @@ export const App: React.FC = () => {
 
   const handleWelcomeComplete = useCallback(() => {
     hasShownWelcomeRef.current = true
+    perfTracker.record('welcome_sequence_done')
     console.log(`[APP ${Date.now()}] [is-delulu:renderer] handleWelcomeComplete called.`)
     completeWelcome()
   }, [completeWelcome])
@@ -116,17 +129,17 @@ export const App: React.FC = () => {
       setAccentPalette(palette)
       currentPaletteRef.current = palette
       const isLight = themeMode === 'light'
-      const rawPrimary = isLight ? palette.primaryLight : palette.primary
-      const primary =
-        !isLight && (rawPrimary === '#BBFF00' || rawPrimary === '#60A5FA') ? '#A3E635' : rawPrimary
-      const secondary =
-        !isLight && (palette.secondary === '#818CF8') ? '#8B5CF6' : palette.secondary
-      const highlight =
-        !isLight && (palette.highlight === '#A78BFA') ? '#00F0FF' : palette.highlight
+      const fallbackPrimary = isLight ? '#6366F1' : '#A3E635'
+      const fallbackSecondary = '#8B5CF6'
+      const fallbackHighlight = '#00F0FF'
+
+      const rawPrimary = (isLight ? (palette.primaryLight || palette.primary) : palette.primary) || fallbackPrimary
+      const primary = rawPrimary
+      const secondary = palette.secondary || fallbackSecondary
+      const highlight = palette.highlight || fallbackHighlight
       const root = document.documentElement
 
-      // Derive per-channel RGBA glow vars for primary, secondary and highlight colors
-      // so the island surface gradient can use all three palette colors independently
+      // Helper to convert hex to RGB channels
       const hexToRgbChannels = (hex: string): [number, number, number] => {
         try {
           const clean = hex.replace('#', '').trim()
@@ -134,7 +147,65 @@ export const App: React.FC = () => {
           const num = parseInt(full, 16)
           return [(num >> 16) & 255, (num >> 8) & 255, num & 255]
         } catch {
-          return [163, 230, 53]
+          return isLight ? [99, 102, 241] : [163, 230, 53]
+        }
+      }
+
+      // Convert HSL to Hex
+      const hslToHexStr = (h: number, s: number, l: number): string => {
+        const c = (1 - Math.abs(2 * l - 1)) * s
+        const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
+        const m = l - c / 2
+        let r1 = 0, g1 = 0, b1 = 0
+        if (0 <= h && h < 60) { r1 = c; g1 = x; b1 = 0 }
+        else if (60 <= h && h < 120) { r1 = x; g1 = c; b1 = 0 }
+        else if (120 <= h && h < 180) { r1 = 0; g1 = c; b1 = x }
+        else if (180 <= h && h < 240) { r1 = 0; g1 = x; b1 = c }
+        else if (240 <= h && h < 300) { r1 = x; g1 = 0; b1 = c }
+        else if (300 <= h && h < 360) { r1 = c; g1 = 0; b1 = x }
+        const r = Math.round((r1 + m) * 255)
+        const g = Math.round((g1 + m) * 255)
+        const b = Math.round((b1 + m) * 255)
+        return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+      }
+
+      // Ensure accessible text color against background
+      const ensureAccessibleText = (hex: string, forDark: boolean): string => {
+        try {
+          const [r255, g255, b255] = hexToRgbChannels(hex)
+          const r = r255 / 255
+          const g = g255 / 255
+          const b = b255 / 255
+          const max = Math.max(r, g, b)
+          const min = Math.min(r, g, b)
+          let h = 0
+          let s = 0
+          const l = (max + min) / 2
+
+          if (max !== min) {
+            const d = max - min
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+            switch (max) {
+              case r: h = ((g - b) / d + (g < b ? 6 : 0)) * 60; break
+              case g: h = ((b - r) / d + 2) * 60; break
+              case b: h = ((r - g) / d + 4) * 60; break
+            }
+          }
+
+          if (forDark) {
+            // In dark mode, ensure text has lightness >= 0.62 for high contrast
+            if (l < 0.62) {
+              return hslToHexStr(h, Math.max(s, 0.65), 0.72)
+            }
+          } else {
+            // In light mode, ensure text has lightness <= 0.42 for readability
+            if (l > 0.42) {
+              return hslToHexStr(h, Math.max(s, 0.70), 0.35)
+            }
+          }
+          return hex
+        } catch {
+          return forDark ? '#A3E635' : '#4F46E5'
         }
       }
 
@@ -142,34 +213,34 @@ export const App: React.FC = () => {
       const [sr, sg, sb] = hexToRgbChannels(secondary)
       const [hr, hg, hb] = hexToRgbChannels(highlight)
 
+      const textAccent = ensureAccessibleText(
+        isLight ? primary : (palette.text || primary),
+        !isLight
+      )
+
       root.style.setProperty('--accent', primary)
       root.style.setProperty('--accent-secondary', secondary)
       root.style.setProperty('--accent-highlight', highlight)
       root.style.setProperty(
         '--accent-glow',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.16)` : `rgba(${pr}, ${pg}, ${pb}, 0.12)`
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.16)` : `rgba(${pr}, ${pg}, ${pb}, 0.14)`
       )
       root.style.setProperty(
         '--accent-subtle',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.07)` : `rgba(${pr}, ${pg}, ${pb}, 0.08)`
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.08)` : `rgba(${pr}, ${pg}, ${pb}, 0.10)`
       )
       root.style.setProperty(
         '--accent-border',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.20)` : `rgba(${pr}, ${pg}, ${pb}, 0.32)`
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.22)` : `rgba(${pr}, ${pg}, ${pb}, 0.32)`
       )
       root.style.setProperty(
         '--border-active',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.35)` : `rgba(${pr}, ${pg}, ${pb}, 0.40)`
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.35)` : `rgba(${pr}, ${pg}, ${pb}, 0.45)`
       )
       root.style.setProperty(
         '--border-glass',
         isLight ? 'rgba(255, 255, 255, 0.80)' : 'rgba(255, 255, 255, 0.07)'
       )
-      const textAccent = isLight
-        ? primary
-        : palette.text === '#BBFF00' || palette.text === '#818CF8'
-        ? '#A3E635'
-        : palette.text || '#A3E635'
       root.style.setProperty('--text-accent', textAccent)
       root.style.setProperty(
         '--accent-secondary-glow',
@@ -180,16 +251,43 @@ export const App: React.FC = () => {
         isLight ? `rgba(${hr}, ${hg}, ${hb}, 0.12)` : `rgba(${hr}, ${hg}, ${hb}, 0.06)`
       )
 
+      // First Page (Launcher) dynamic palette tokens
+      root.style.setProperty(
+        '--badge-bg',
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.10)` : `rgba(${pr}, ${pg}, ${pb}, 0.14)`
+      )
+      root.style.setProperty('--badge-text', textAccent)
+      root.style.setProperty(
+        '--search-icon-color',
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.70)` : `rgba(${pr}, ${pg}, ${pb}, 0.75)`
+      )
+      root.style.setProperty(
+        '--search-item-selected-bg',
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.08)` : `rgba(${pr}, ${pg}, ${pb}, 0.12)`
+      )
+      root.style.setProperty(
+        '--search-item-selected-border',
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.25)` : `rgba(${pr}, ${pg}, ${pb}, 0.35)`
+      )
+      root.style.setProperty(
+        '--search-item-icon-bg',
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.14)` : `rgba(${pr}, ${pg}, ${pb}, 0.20)`
+      )
+      root.style.setProperty('--search-item-icon-color', primary)
+      root.style.setProperty('--nav-item-active-color', primary)
+      root.style.setProperty(
+        '--border-card-hover',
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.30)` : `rgba(${pr}, ${pg}, ${pb}, 0.40)`
+      )
+      root.style.setProperty(
+        '--card-hover-glow',
+        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.16)` : `rgba(${pr}, ${pg}, ${pb}, 0.14)`
+      )
+
       // Calculate accessible contrast for text rendered directly on --accent backgrounds
       let lum = 0.5
       try {
-        const clean = primary.replace('#', '').trim()
-        const fullHex = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
-        const num = parseInt(fullHex, 16)
-        const r = (num >> 16) & 255
-        const g = (num >> 8) & 255
-        const b = num & 255
-        lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        lum = (0.299 * pr + 0.587 * pg + 0.114 * pb) / 255
       } catch {}
       root.style.setProperty('--text-on-accent', lum > 0.65 ? '#0A0D0E' : '#FFFFFF')
     },
@@ -237,11 +335,15 @@ export const App: React.FC = () => {
       })
     }
 
-    // 2. Initial telemetry & services load
-    window.isDelulu.getSystemStats().then(setSystemStats)
-    window.isDelulu.getClipboardHistory().then(setClipboardItems)
-    window.isDelulu.getMediaState().then(setMediaState)
-    window.isDelulu.getRoutines().then(setRoutines)
+    // 2. Initial telemetry & services load (deferred slightly to avoid CPU contention with initial paint & welcome entrance)
+    const secondaryLoadTimer = setTimeout(() => {
+      if (window.isDelulu) {
+        window.isDelulu.getSystemStats().then(setSystemStats)
+        window.isDelulu.getClipboardHistory().then(setClipboardItems)
+        window.isDelulu.getMediaState().then(setMediaState)
+        window.isDelulu.getRoutines().then(setRoutines)
+      }
+    }, 450)
 
     // 3. Subscriptions
     const unsubSystem = window.isDelulu.onSystemStatsUpdate(setSystemStats)
@@ -464,6 +566,7 @@ export const App: React.FC = () => {
       : () => {}
 
     return () => {
+      clearTimeout(secondaryLoadTimer)
       unsubStartWelcome()
       unsubSystem()
       unsubClip()
@@ -507,11 +610,31 @@ export const App: React.FC = () => {
     preferences?.appearance
   ])
 
+  // Recalculate surface bounds only when mode, dimensions, or notification states change
+  useEffect(() => {
+    const updateRect = () => {
+      const surface = document.getElementById('island-surface')
+      if (surface) {
+        const r = surface.getBoundingClientRect()
+        cachedSurfaceRectRef.current = { left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+      } else {
+        cachedSurfaceRectRef.current = null
+      }
+    }
+
+    updateRect()
+    const timer = setTimeout(updateRect, 120)
+    window.addEventListener('resize', updateRect)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', updateRect)
+    }
+  }, [currentMode, isChargingActive, isNotificationActive, activeNotification])
+
   // Track global pointer movements for hit testing & click pass-through
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent): void => {
       // 1. While any notification is active, hit-test the active notification pill surface
-      // to permit clicking into the dashboard, without triggering normal island hover
       if (isNotificationActiveRef.current) {
         const notifSurface = isChargingActiveRef.current
           ? document.getElementById('island-surface')
@@ -542,14 +665,22 @@ export const App: React.FC = () => {
         return
       }
 
-      // 3. Normal visible island surface hit-testing
-      const surface = document.getElementById('island-surface')
-      if (!surface) {
+      // 3. Normal visible island surface hit-testing using cached rect (avoids forced layout reflow)
+      let rect = cachedSurfaceRectRef.current
+      if (!rect) {
+        const surface = document.getElementById('island-surface')
+        if (surface) {
+          const r = surface.getBoundingClientRect()
+          rect = { left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+          cachedSurfaceRectRef.current = rect
+        }
+      }
+
+      if (!rect) {
         updateMouseHitTest(false)
         return
       }
 
-      const rect = surface.getBoundingClientRect()
       const isInside =
         e.clientX >= rect.left &&
         e.clientX <= rect.right &&

@@ -15,13 +15,15 @@ import {
   getHasShownWelcome,
   markWelcomeShown,
   resetWelcomeShownForResume,
-  showIslandWindowForWelcome
+  showIslandWindowForWelcome,
+  handleRendererReady
 } from './window'
 import { setupTray } from './tray'
 import { getSystemStats } from './services/system'
 import {
   startClipboardMonitor,
   stopClipboardMonitor,
+  setClipboardPollInterval,
   getClipboardHistory,
   copyText,
   clearClipboard,
@@ -60,9 +62,12 @@ import {
   getSavedWallpaperImages,
   getWallpaperThumbnail,
   applyWallpaperAsDesktop,
-  getCurrentDesktopWallpaper
+  getCurrentDesktopWallpaper,
+  cleanUpWallpaperTransition,
+  getWallpaperTransitionState
 } from './services/wallpaperGallery'
 import { IslandMode, UserPreferences, MediaControlAction } from '../shared/types'
+import { perfTracker } from '../shared/perf'
 
 app.setName('is-delulu')
 
@@ -88,195 +93,232 @@ if (!gotTheLock) {
 
   // App lifecycle
   app.whenReady().then(() => {
+    perfTracker.record('main_process_ready')
+
     // Initialize persistent user preferences
     initPreferences()
 
-  const mainWindow = createMainWindow()
+    const mainWindow = createMainWindow()
 
-  try {
-    setupTray()
-  } catch (trayErr) {
-    console.warn('[is-delulu] Tray icon setup deferred:', trayErr)
-  }
-
-  startClipboardMonitor()
-  startMediaMonitor()
-
-  // Start real-time battery monitor with genuine plug-in and energy saver edge detection
-  let previousPowerConnected: boolean | null = null
-  let previousEnergySaver: boolean | null = null
-  let isInitialBatteryCheck = true
-
-  startBatteryMonitor((batteryState) => {
-    if (!mainWindow || mainWindow.isDestroyed()) return
-
-    const isConnected = batteryState.isOnAC === true || batteryState.isCharging === true
-    const wasConnected = previousPowerConnected
-    const isNowConnected = isConnected
-
-    const currentEnergySaver = batteryState.isEnergySaver
-    const wasEnergySaver = previousEnergySaver
-
-    if (isInitialBatteryCheck) {
-      isInitialBatteryCheck = false
-      previousPowerConnected = isNowConnected
-      if (currentEnergySaver !== null && currentEnergySaver !== undefined) {
-        previousEnergySaver = currentEnergySaver
-      }
-      console.log(
-        `[is-delulu:battery] Initial battery sync: pct=${batteryState.percent}%, AC=${batteryState.isOnAC}, charging=${batteryState.isCharging}, energySaver=${currentEnergySaver}`
-      )
-      mainWindow.webContents.send('battery:update', batteryState)
-      return
+    try {
+      setupTray()
+    } catch (trayErr) {
+      console.warn('[is-delulu] Tray icon setup deferred:', trayErr)
     }
 
-    // Genuine plug-in transition: false -> true, strictly excluding startup state
-    const isNewPlugIn = wasConnected === false && isNowConnected === true
-    previousPowerConnected = isNowConnected
+    // Handshake: renderer signals ready when React root has mounted and drawn the initial frame
+    ipcMain.handle('app:renderer-ready', () => {
+      handleRendererReady()
+    })
 
-    if (isNewPlugIn) {
-      console.log('[is-delulu:battery] Genuine charger connection detected! Automatically revealing window.')
-      showChargingNotificationWindow()
-    }
+    ipcMain.handle('debug:get-perf-milestones', () => {
+      return perfTracker.getMilestones()
+    })
 
-    // Energy Saver state transitions: OFF -> ON and ON -> OFF
-    let energySaverTransition: 'on' | 'off' | null = null
-    if (
-      currentEnergySaver !== null &&
-      currentEnergySaver !== undefined &&
-      wasEnergySaver !== null &&
-      wasEnergySaver !== undefined
-    ) {
-      if (!wasEnergySaver && currentEnergySaver === true) {
-        energySaverTransition = 'on'
-      } else if (wasEnergySaver === true && currentEnergySaver === false) {
-        energySaverTransition = 'off'
-      }
-    }
+    ipcMain.on('debug:get-main-start-time', (event) => {
+      event.returnValue = perfTracker.getStartTime()
+    })
 
-    if (currentEnergySaver !== null && currentEnergySaver !== undefined) {
-      previousEnergySaver = currentEnergySaver
-    }
+    ipcMain.handle('debug:record-animation-metrics', (_event, metrics) => {
+      console.log('[MAIN ANIMATION LOG]', JSON.stringify(metrics))
+    })
 
-    if (energySaverTransition === 'on') {
-      console.log(
-        `[is-delulu:battery] Energy Saver transition OFF -> ON detected! Revealing window for notification (thresh=${batteryState.energySaverThreshold})`
-      )
-      showNotificationWindow('energy_saver')
-    } else if (energySaverTransition === 'off') {
-      console.log(
-        `[is-delulu:battery] Energy Saver transition ON -> OFF detected! Revealing window for notification (thresh=${batteryState.energySaverThreshold})`
-      )
-      showNotificationWindow('energy_saver')
-    }
+    // Start background services in phased stages so cold-start and Windows startup
+    // remain completely responsive without CPU or disk contention.
+    let sysTimer: NodeJS.Timeout | null = null
 
-    mainWindow.webContents.send('battery:update', batteryState)
-    if (isNewPlugIn) {
-      mainWindow.webContents.send('battery:charging-started', batteryState)
-    }
-    if (energySaverTransition) {
-      mainWindow.webContents.send('battery:energy-saver-changed', {
-        mode: energySaverTransition,
-        threshold: batteryState.energySaverThreshold
+    // Stage 1 (150ms after window creation): Real-time battery and wallpaper monitor
+    setTimeout(() => {
+      let previousPowerConnected: boolean | null = null
+      let previousEnergySaver: boolean | null = null
+      let isInitialBatteryCheck = true
+
+      startBatteryMonitor((batteryState) => {
+        if (!mainWindow || mainWindow.isDestroyed()) return
+
+        const isConnected = batteryState.isOnAC === true || batteryState.isCharging === true
+        const wasConnected = previousPowerConnected
+        const isNowConnected = isConnected
+
+        const currentEnergySaver = batteryState.isEnergySaver
+        const wasEnergySaver = previousEnergySaver
+
+        if (isInitialBatteryCheck) {
+          isInitialBatteryCheck = false
+          previousPowerConnected = isNowConnected
+          if (currentEnergySaver !== null && currentEnergySaver !== undefined) {
+            previousEnergySaver = currentEnergySaver
+          }
+          console.log(
+            `[is-delulu:battery] Initial battery sync: pct=${batteryState.percent}%, AC=${batteryState.isOnAC}, charging=${batteryState.isCharging}, energySaver=${currentEnergySaver}`
+          )
+          mainWindow.webContents.send('battery:update', batteryState)
+          return
+        }
+
+        // Genuine plug-in transition: false -> true, strictly excluding startup state
+        const isNewPlugIn = wasConnected === false && isNowConnected === true
+        previousPowerConnected = isNowConnected
+
+        if (isNewPlugIn) {
+          console.log('[is-delulu:battery] Genuine charger connection detected! Automatically revealing window.')
+          showChargingNotificationWindow()
+        }
+
+        // Energy Saver state transitions: OFF -> ON and ON -> OFF
+        let energySaverTransition: 'on' | 'off' | null = null
+        if (
+          currentEnergySaver !== null &&
+          currentEnergySaver !== undefined &&
+          wasEnergySaver !== null &&
+          wasEnergySaver !== undefined
+        ) {
+          if (!wasEnergySaver && currentEnergySaver === true) {
+            energySaverTransition = 'on'
+          } else if (wasEnergySaver === true && currentEnergySaver === false) {
+            energySaverTransition = 'off'
+          }
+        }
+
+        if (currentEnergySaver !== null && currentEnergySaver !== undefined) {
+          previousEnergySaver = currentEnergySaver
+        }
+
+        if (energySaverTransition === 'on') {
+          console.log(
+            `[is-delulu:battery] Energy Saver transition OFF -> ON detected! Revealing window for notification (thresh=${batteryState.energySaverThreshold})`
+          )
+          showNotificationWindow('energy_saver')
+        } else if (energySaverTransition === 'off') {
+          console.log(
+            `[is-delulu:battery] Energy Saver transition ON -> OFF detected! Revealing window for notification (thresh=${batteryState.energySaverThreshold})`
+          )
+          showNotificationWindow('energy_saver')
+        }
+
+        mainWindow.webContents.send('battery:update', batteryState)
+        if (isNewPlugIn) {
+          mainWindow.webContents.send('battery:charging-started', batteryState)
+        }
+        if (energySaverTransition) {
+          mainWindow.webContents.send('battery:energy-saver-changed', {
+            mode: energySaverTransition,
+            threshold: batteryState.energySaverThreshold
+          })
+        }
       })
-    }
-  })
 
-  // Windows power suspend and resume lifecycle monitoring
-  try {
-    powerMonitor.on('suspend', () => {
-      console.log('[is-delulu:lifecycle] Windows suspend event detected: system entering sleep/hibernation.')
+      // Start real-time desktop wallpaper change monitor
+      startWallpaperMonitor((palette) => {
+        const prefs = getPreferences()
+        if (prefs.accentMode === 'wallpaper' && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('theme:accent-updated', palette)
+        }
+      })
+    }, 150)
+
+    // Stage 2 (1400ms after window creation): GSMTC media daemon, clipboard history, telemetry
+    // Deferred until entrance slide settles so child process creation doesn't drop animation frames.
+    setTimeout(() => {
+      startClipboardMonitor()
+      startMediaMonitor()
+
+      // Stream periodic system metrics gently (every 3s)
+      sysTimer = setInterval(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          const stats = getSystemStats()
+          mainWindow.webContents.send('system:update', stats)
+        }
+      }, 3000)
+
+      perfTracker.record('background_services_ready')
+    }, 1400)
+
+    // Windows power suspend and resume lifecycle monitoring
+    try {
+      powerMonitor.on('suspend', () => {
+        console.log('[is-delulu:lifecycle] Windows suspend event detected: system entering sleep/hibernation.')
+      })
+
+      powerMonitor.on('resume', () => {
+        console.log('[is-delulu:lifecycle] Windows resume event detected: system resumed from sleep.')
+        // Reset welcome tracking so the resume greeting can play once
+        resetWelcomeShownForResume()
+        showIslandWindowForWelcome()
+        // Immediately refresh battery status to reconcile state changes during sleep
+        requestBatteryRefresh()
+        if (!mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('island:lifecycle-event', { type: 'resume' })
+        }
+      })
+    } catch (err) {
+      console.warn('[is-delulu:lifecycle] powerMonitor suspend/resume hooks unavailable:', err)
+    }
+
+    // Register global hotkey to toggle / summon island
+    globalShortcut.register('CommandOrControl+Shift+Space', () => {
+      const current = getCurrentIslandMode()
+      const next: IslandMode = current === 'expanded' ? 'collapsed' : 'expanded'
+      setIslandWindowMode(next)
+      mainWindow.webContents.send('island:mode-changed', next)
+      mainWindow.show()
+      mainWindow.focus()
     })
 
-    powerMonitor.on('resume', () => {
-      console.log('[is-delulu:lifecycle] Windows resume event detected: system resumed from sleep.')
-      // Reset welcome tracking so the resume greeting can play once
-      resetWelcomeShownForResume()
-      showIslandWindowForWelcome()
-      // Immediately refresh battery status to reconcile state changes during sleep
-      requestBatteryRefresh()
+    // Register development debug hotkey to force island visible
+    globalShortcut.register('CommandOrControl+Shift+D', () => {
+      const isForced = toggleForceVisibleDebug()
+      mainWindow.webContents.send('debug:force-visible-changed', isForced)
+    })
+
+    // Stream clipboard changes to renderer
+    onClipboardChange((items) => {
       if (!mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('island:lifecycle-event', { type: 'resume' })
+        mainWindow.webContents.send('clipboard:update', items)
       }
     })
-  } catch (err) {
-    console.warn('[is-delulu:lifecycle] powerMonitor suspend/resume hooks unavailable:', err)
-  }
 
-  // Register global hotkey to toggle / summon island
-  globalShortcut.register('CommandOrControl+Shift+Space', () => {
-    const current = getCurrentIslandMode()
-    const next: IslandMode = current === 'expanded' ? 'collapsed' : 'expanded'
-    setIslandWindowMode(next)
-    mainWindow.webContents.send('island:mode-changed', next)
-    mainWindow.show()
-    mainWindow.focus()
-  })
+    // Stream real GSMTC media changes to renderer
+    onMediaChange((media) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('media:update', media)
+      }
+    })
 
-  // Register development debug hotkey to force island visible
-  globalShortcut.register('CommandOrControl+Shift+D', () => {
-    const isForced = toggleForceVisibleDebug()
-    mainWindow.webContents.send('debug:force-visible-changed', isForced)
-  })
+    // Stream preference changes to renderer
+    onPreferencesChange((prefs) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('preferences:changed', prefs)
+      }
+    })
 
-  // Stream clipboard changes to renderer
-  onClipboardChange((items) => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('clipboard:update', items)
-    }
-  })
+    // Stream theme changes to renderer
+    onThemeChange((theme) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('theme:changed', theme)
+      }
+    })
 
-  // Stream real GSMTC media changes to renderer
-  onMediaChange((media) => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('media:update', media)
-    }
-  })
+    app.on('before-quit', () => {
+      if (sysTimer) clearInterval(sysTimer)
+      stopActivationMonitor()
+      stopClipboardMonitor()
+      stopMediaMonitor()
+      stopBatteryMonitor()
+      stopWallpaperMonitor()
+      cleanUpWallpaperTransition()
+      globalShortcut.unregisterAll()
+    })
 
-  // Stream preference changes to renderer
-  onPreferencesChange((prefs) => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('preferences:changed', prefs)
-    }
-  })
-
-  // Stream theme changes to renderer
-  onThemeChange((theme) => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('theme:changed', theme)
-    }
-  })
-
-  // Start real-time desktop wallpaper change monitor
-  startWallpaperMonitor((palette) => {
-    const prefs = getPreferences()
-    if (prefs.accentMode === 'wallpaper' && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('theme:accent-updated', palette)
-    }
-  })
-
-  // Stream periodic system metrics
-  const sysTimer = setInterval(() => {
-    if (!mainWindow.isDestroyed()) {
-      const stats = getSystemStats()
-      mainWindow.webContents.send('system:update', stats)
-    }
-  }, 2500)
-
-  app.on('before-quit', () => {
-    clearInterval(sysTimer)
-    stopActivationMonitor()
-    stopClipboardMonitor()
-    stopMediaMonitor()
-    stopBatteryMonitor()
-    stopWallpaperMonitor()
-    globalShortcut.unregisterAll()
-  })
-
-  // IPC Handlers - Window & Island Mode
-  ipcMain.handle('island:set-mode', (_event, mode: IslandMode) => {
-    setIslandWindowMode(mode)
-  })
+    // IPC Handlers - Window & Island Mode
+    ipcMain.handle('island:set-mode', (_event, mode: IslandMode) => {
+      setIslandWindowMode(mode)
+      if (mode === 'expanded') {
+        setClipboardPollInterval(600)
+      } else {
+        setClipboardPollInterval(2000)
+      }
+    })
 
   ipcMain.handle('island:get-mode', () => {
     return getCurrentIslandMode()
@@ -486,6 +528,10 @@ if (!gotTheLock) {
 
   ipcMain.handle('wallpaper:get-current-desktop', () => {
     return getCurrentDesktopWallpaper()
+  })
+
+  ipcMain.handle('wallpaper:get-transition-state', () => {
+    return getWallpaperTransitionState()
   })
 
   // Welcome Lifecycle

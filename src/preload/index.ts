@@ -221,6 +221,9 @@ const isDeluluAPI: IsDeluluAPI = {
   getCurrentDesktopWallpaper: (): Promise<string | null> => {
     return ipcRenderer.invoke('wallpaper:get-current-desktop')
   },
+  getWallpaperTransitionState: (): Promise<string> => {
+    return ipcRenderer.invoke('wallpaper:get-transition-state')
+  },
 
   // Battery & Charging Notification
   getBatteryState: (): Promise<BatteryState> => {
@@ -306,6 +309,20 @@ const isDeluluAPI: IsDeluluAPI = {
     return () => {
       ipcRenderer.removeListener('island:lifecycle-event', handler)
     }
+  },
+
+  // Performance & Handshake
+  notifyRendererReady: (): Promise<void> => {
+    return ipcRenderer.invoke('app:renderer-ready')
+  },
+  getPerfMilestones: () => {
+    return ipcRenderer.invoke('debug:get-perf-milestones')
+  },
+  getMainStartTime: (): number => {
+    return ipcRenderer.sendSync('debug:get-main-start-time')
+  },
+  recordAnimationMetrics: (metrics: AnimationMetrics): Promise<void> => {
+    return ipcRenderer.invoke('debug:record-animation-metrics', metrics)
   },
 
   // Diagnostics & Debug

@@ -11,6 +11,7 @@ interface CommandSearchProps {
 export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction }) => {
   const { searchQuery, setSearchQuery } = useIslandStore()
   const [selectedIndex, setSelectedIndex] = useState<number>(0)
+  const [isInputFocused, setIsInputFocused] = useState<boolean>(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -83,16 +84,25 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
           gap: '10px',
           padding: '8px 14px',
           backgroundColor: 'var(--bg-input)',
-          border: '1px solid var(--border-input)',
+          border: `1px solid ${isInputFocused ? 'var(--accent-border)' : 'var(--border-input)'}`,
           borderRadius: 'var(--radius-button)',
-          boxShadow: 'var(--shadow-input)'
+          boxShadow: isInputFocused
+            ? '0 0 0 1px var(--accent-border), 0 0 12px -2px var(--accent-glow)'
+            : 'var(--shadow-input)',
+          transition: 'border-color var(--transition-fast), box-shadow var(--transition-fast)'
         }}
       >
-        <Search size={16} color="var(--search-icon-color)" />
+        <Search
+          size={16}
+          color={isInputFocused || searchQuery ? 'var(--accent)' : 'var(--search-icon-color)'}
+          style={{ transition: 'color var(--transition-fast)' }}
+        />
         <input
           ref={inputRef}
           type="text"
           value={searchQuery}
+          onFocus={() => setIsInputFocused(true)}
+          onBlur={() => setIsInputFocused(false)}
           onChange={(e) => {
             setSearchQuery(e.target.value)
             setSelectedIndex(0)
@@ -118,7 +128,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'var(--text-muted)',
+              color: 'var(--accent)',
               fontSize: '11px',
               fontFamily: 'var(--font-text)',
               cursor: 'pointer'
@@ -194,7 +204,7 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                     ? '1px solid var(--search-item-selected-border)'
                     : '1px solid transparent',
                   cursor: 'pointer',
-                  transition: 'background var(--transition-fast)'
+                  transition: 'background var(--transition-fast), border-color var(--transition-fast)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -207,10 +217,12 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                         ? 'var(--search-item-icon-bg)'
                         : 'var(--icon-container-bg)',
                       boxShadow: isSelected ? 'none' : 'var(--icon-container-shadow)',
+                      border: isSelected ? '1px solid var(--accent-border)' : '1px solid transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: isSelected ? 'var(--search-item-icon-color)' : 'var(--text-secondary)'
+                      color: isSelected ? 'var(--search-item-icon-color)' : 'var(--text-secondary)',
+                      transition: 'all var(--transition-fast)'
                     }}
                   >
                     <IconBadge name={item.icon} size={15} />
@@ -241,7 +253,9 @@ export const CommandSearch: React.FC<CommandSearchProps> = ({ onExecuteAction })
                             ? 'var(--badge-bg)'
                             : 'var(--badge-mock-bg)',
                           color: item.isReal ? 'var(--badge-text)' : 'var(--badge-mock-text)',
-                          fontFamily: 'var(--font-text)'
+                          border: item.isReal ? '1px solid var(--accent-border)' : '1px solid transparent',
+                          fontFamily: 'var(--font-text)',
+                          transition: 'all var(--transition-fast)'
                         }}
                       >
                         {item.isReal ? 'Native' : 'Mock'}

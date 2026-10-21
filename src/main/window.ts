@@ -3,6 +3,7 @@ import { join } from 'path'
 import { WINDOW_CONFIG } from '../shared/constants'
 import { IslandMode } from '../shared/types'
 import { getPreferences, updatePreferences } from './services/preferences'
+import { perfTracker } from '../shared/perf'
 
 let mainWindow: BrowserWindow | null = null
 let currentMode: IslandMode = 'hidden'
@@ -13,12 +14,61 @@ let isChargingNotificationActive = false
 let hasShownWelcomeInSession = false
 let isWelcomeOngoing = false
 
+let isRendererReady = false
+let isWindowReadyToShow = false
+let initialWindowShown = false
+
+// Cached primary display work area to avoid expensive continuous native OS display enumeration
+let cachedPrimaryWorkArea = { x: 0, y: 0, width: 1920, height: 1080 }
+let cachedCenterX = 960
+
+export function updateCachedDisplayMetrics(): void {
+  try {
+    const primaryDisplay = screen.getPrimaryDisplay()
+    cachedPrimaryWorkArea = primaryDisplay.workArea
+    cachedCenterX = cachedPrimaryWorkArea.x + cachedPrimaryWorkArea.width / 2
+  } catch {}
+}
+
+export function handleRendererReady(): void {
+  perfTracker.record('renderer_ready')
+  isRendererReady = true
+  maybeShowInitialWindow()
+}
+
+function maybeShowInitialWindow(): void {
+  if (initialWindowShown || !mainWindow || mainWindow.isDestroyed()) return
+  if (!isRendererReady || !isWindowReadyToShow) return
+
+  initialWindowShown = true
+  perfTracker.record('first_interactive_frame')
+
+  const prefs = getPreferences()
+  if (!hasShownWelcomeInSession) {
+    showIslandWindowForWelcome()
+    console.log('[is-delulu:window] Showing window on startup for welcome sequence (renderer ready handshake)')
+  } else if (prefs.isPinned || forceVisibleDebug) {
+    currentMode = 'collapsed'
+    enforceCenteredPosition('collapsed')
+    mainWindow.showInactive()
+    mainWindow.setIgnoreMouseEvents(true, { forward: true })
+    console.log('[is-delulu:window] Showing window on startup (pinned or debug)')
+  } else {
+    currentMode = 'hidden'
+    enforceCenteredPosition('hidden')
+    mainWindow.hide()
+    mainWindow.webContents.send('island:mode-changed', 'hidden')
+    console.log('[is-delulu:window] Window initialized in hidden state on startup')
+  }
+}
+
 export function getHasShownWelcome(): boolean {
   return hasShownWelcomeInSession
 }
 
 export function markWelcomeShown(): void {
   hasShownWelcomeInSession = true
+  perfTracker.record('welcome_animation_complete')
   // Only mark welcome ongoing false if no charging/power notification has taken over
   if (!isChargingNotificationActive && activeNotificationType === null) {
     isWelcomeOngoing = false
@@ -34,6 +84,7 @@ export function resetWelcomeShownForResume(): void {
 
 export function showIslandWindowForWelcome(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
+  perfTracker.record('welcome_animation_start')
   isWelcomeOngoing = true
   currentMode = 'collapsed'
   enforceCenteredPosition('collapsed')
@@ -78,14 +129,10 @@ export function toggleForceVisibleDebug(): boolean {
 }
 
 export function createMainWindow(): BrowserWindow {
-  const primaryDisplay = screen.getPrimaryDisplay()
-  const { x: workX, y: workY, width: workW, height: workH } = primaryDisplay.workArea
+  updateCachedDisplayMetrics()
+  const { x: workX, y: workY, width: workW, height: workH } = cachedPrimaryWorkArea
 
-  console.log('[is-delulu:display] Primary Display:', {
-    bounds: primaryDisplay.bounds,
-    workArea: primaryDisplay.workArea,
-    scaleFactor: primaryDisplay.scaleFactor
-  })
+  console.log('[is-delulu:display] Primary Display WorkArea:', cachedPrimaryWorkArea)
 
   const initialWidth = WINDOW_CONFIG.width
   const initialHeight = WINDOW_CONFIG.height
@@ -124,29 +171,25 @@ export function createMainWindow(): BrowserWindow {
     }
   })
 
+  perfTracker.record('main_window_created')
+
   // Set window floating level above standard desktop windows
   mainWindow.setAlwaysOnTop(true, 'screen-saver')
 
   mainWindow.on('ready-to-show', () => {
+    perfTracker.record('window_ready_to_show')
     console.log('[is-delulu:window] ready-to-show event fired')
-    const prefs = getPreferences()
-    if (!hasShownWelcomeInSession) {
-      showIslandWindowForWelcome()
-      console.log('[is-delulu:window] Showing window on startup for welcome sequence')
-    } else if (prefs.isPinned || forceVisibleDebug) {
-      currentMode = 'collapsed'
-      enforceCenteredPosition('collapsed')
-      mainWindow?.showInactive()
-      mainWindow?.setIgnoreMouseEvents(true, { forward: true })
-      console.log('[is-delulu:window] Showing window on startup (pinned or debug)')
-    } else {
-      // Start in hidden state until user reaches the actual top-center edge
-      currentMode = 'hidden'
-      enforceCenteredPosition('hidden')
-      mainWindow?.hide()
-      mainWindow?.webContents.send('island:mode-changed', 'hidden')
-      console.log('[is-delulu:window] Window initialized in hidden state on startup')
-    }
+    isWindowReadyToShow = true
+    maybeShowInitialWindow()
+
+    // Safety fallback: if renderer handshake does not arrive within 1200ms, proceed
+    setTimeout(() => {
+      if (!initialWindowShown) {
+        console.warn('[is-delulu:window] Renderer ready timeout, falling back to showing window')
+        isRendererReady = true
+        maybeShowInitialWindow()
+      }
+    }, 1200)
   })
 
   mainWindow.on('show', () => {
@@ -179,6 +222,7 @@ export function createMainWindow(): BrowserWindow {
   })
 
   mainWindow.webContents.on('did-finish-load', () => {
+    perfTracker.record('renderer_did_finish_load')
     console.log('[is-delulu:window] Renderer web contents loaded successfully')
     if (!hasShownWelcomeInSession) {
       mainWindow?.webContents.send('island:lifecycle-event', { type: 'startup' })
@@ -187,7 +231,8 @@ export function createMainWindow(): BrowserWindow {
 
   // Re-center window when screen resolution or DPI scaling changes
   screen.on('display-metrics-changed', () => {
-    console.log('[is-delulu:display] Display metrics changed, re-centering window')
+    console.log('[is-delulu:display] Display metrics changed, updating metrics and re-centering window')
+    updateCachedDisplayMetrics()
     enforceCenteredPosition(currentMode)
   })
 
@@ -210,8 +255,11 @@ export function createMainWindow(): BrowserWindow {
 export function enforceCenteredPosition(_mode: IslandMode = currentMode): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
 
-  const primaryDisplay = screen.getPrimaryDisplay()
-  const { x: workX, y: workY, width: workW } = primaryDisplay.workArea
+  if (cachedPrimaryWorkArea.width === 0) {
+    updateCachedDisplayMetrics()
+  }
+
+  const { x: workX, y: workY, width: workW } = cachedPrimaryWorkArea
 
   const targetWidth = WINDOW_CONFIG.width
   const targetHeight = WINDOW_CONFIG.height
@@ -380,6 +428,8 @@ export function hideIslandWindow(): void {
 export function startActivationMonitor(): void {
   if (activationTimer) clearInterval(activationTimer)
 
+  updateCachedDisplayMetrics()
+
   activationTimer = setInterval(() => {
     if (!mainWindow || mainWindow.isDestroyed()) return
 
@@ -403,15 +453,14 @@ export function startActivationMonitor(): void {
       return
     }
 
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const { x: workX, y: workY, width: workW } = primaryDisplay.workArea
-    const centerX = workX + workW / 2
+    const { x: workX, y: workY } = cachedPrimaryWorkArea
+    const centerX = cachedCenterX
     const pt = screen.getCursorScreenPoint()
 
     // 1. Narrow top-edge activation zone:
     // Physical monitor top ceiling: pt.y >= workY && pt.y <= workY + 2 (only top 2-3 pixels)
     // Horizontally centered matching the collapsed pill width (e.g. 190px -> +/- 95px)
-    // This strictly prevents triggering during normal mouse movement over Brave browser tabs.
+    // This strictly prevents triggering during normal mouse movement over browser tabs.
     const inTopEdgeActivationZone =
       pt.y >= workY &&
       pt.y <= workY + 2 &&
@@ -451,7 +500,6 @@ export function startActivationMonitor(): void {
 
       if (inSurface !== isHoverInWindowOrZone) {
         isHoverInWindowOrZone = inSurface
-        console.log(`[is-delulu:hover] Island hover state changed: ${inSurface} at (${pt.x}, ${pt.y})`)
         mainWindow.webContents.send('island:hover-state', inSurface)
       }
     } else {

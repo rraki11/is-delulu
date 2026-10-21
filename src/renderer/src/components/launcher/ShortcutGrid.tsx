@@ -18,20 +18,31 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
           padding: '0 2px'
         }}
       >
-        <span
-          className="font-display"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '11px',
-            fontWeight: 600,
-            lineHeight: '14px',
-            color: 'var(--text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em'
-          }}
-        >
-          Quick Shortcuts
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--accent)',
+              boxShadow: '0 0 6px var(--accent-glow)'
+            }}
+          />
+          <span
+            className="font-display"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '11px',
+              fontWeight: 600,
+              lineHeight: '14px',
+              color: 'var(--text-secondary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em'
+            }}
+          >
+            Quick Shortcuts
+          </span>
+        </div>
         <span
           style={{
             fontSize: '10px',
@@ -59,6 +70,7 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
             whileHover={{
               backgroundColor: 'var(--bg-card-hover)',
               borderColor: 'var(--border-card-hover)',
+              boxShadow: '0 4px 14px -2px var(--card-hover-glow)',
               y: -1
             }}
             whileTap={{ scale: 0.97 }}
@@ -124,8 +136,10 @@ export const ShortcutGrid: React.FC<ShortcutGridProps> = ({ onLaunch }) => {
                 backgroundColor: item.isInstalledMock
                   ? 'var(--badge-mock-bg)'
                   : 'var(--badge-bg)',
+                border: item.isInstalledMock ? '1px solid transparent' : '1px solid var(--accent-border)',
                 padding: '1px 5px',
-                borderRadius: '4px'
+                borderRadius: '4px',
+                transition: 'all var(--transition-fast)'
               }}
             >
               {item.isInstalledMock ? 'Mock' : 'Native'}

@@ -19,6 +19,18 @@ let lastKnownState: BatteryState = {
 let isStarting = false
 let isStopped = false
 
+function initFastBatteryState(): void {
+  try {
+    const onBattery = powerMonitor.onBatteryPower
+    if (typeof onBattery === 'boolean') {
+      lastKnownState.isOnAC = !onBattery
+      lastKnownState.isCharging = !onBattery
+    }
+  } catch {}
+}
+
+initFastBatteryState()
+
 function resolveDaemonPath(): string | null {
   const possiblePaths = [
     join(process.cwd(), 'src/main/services/battery-daemon.ps1'),

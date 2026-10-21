@@ -439,24 +439,39 @@ export const WallpaperWidget: React.FC = () => {
     }
   }
 
-  // ── Select Wallpaper Card ───────────────────────────────────────────────────
+  // ── Select Wallpaper Card (Preview Only) ───────────────────────────────────
   const handleSelectWallpaper = (wallpaper: WallpaperItem): void => {
     setSelectedWallpaper(wallpaper)
-    if (window.isDelulu?.updatePreferences) {
-      window.isDelulu.updatePreferences({ selectedWallpaperPath: wallpaper.filePath })
-    }
+    // Note: Previewing does not reorder the gallery or change the desktop
   }
 
   // ── Apply Selected Wallpaper as Desktop ─────────────────────────────────────
   const handleApplyWallpaper = async (): Promise<void> => {
-    if (!selectedWallpaper || !window.isDelulu?.applyDesktopWallpaper) return
+    if (!selectedWallpaper || !window.isDelulu?.applyDesktopWallpaper || isApplying) return
     setIsApplying(true)
+    const targetWallpaper = selectedWallpaper
 
     try {
-      const res = await window.isDelulu.applyDesktopWallpaper(selectedWallpaper.filePath)
+      const res = await window.isDelulu.applyDesktopWallpaper(targetWallpaper.filePath)
       if (res.success) {
-        setActiveDesktopPath(selectedWallpaper.filePath)
-        setStatusMessage(`Desktop wallpaper set to "${selectedWallpaper.name}"`)
+        // Dynamically reorder gallery: move successfully applied wallpaper to first position
+        setWallpapers((prev) => {
+          const filtered = prev.filter(
+            (item) => item.filePath.toLowerCase() !== targetWallpaper.filePath.toLowerCase()
+          )
+          return [targetWallpaper, ...filtered]
+        })
+
+        // Keep selection and active desktop synchronized with first card
+        setSelectedWallpaper(targetWallpaper)
+        setActiveDesktopPath(targetWallpaper.filePath)
+
+        // Ensure the selected first wallpaper is visible at the start of horizontal scroll
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' })
+        }
+
+        setStatusMessage(`Desktop wallpaper set to "${targetWallpaper.name}"`)
       } else {
         setStatusMessage(res.message || 'Failed to update desktop wallpaper')
       }

@@ -118,33 +118,41 @@ if (typeof window !== 'undefined') {
   ;(window as unknown as { __typographyDiagnostic: typeof runTypographyDiagnostic }).__typographyDiagnostic =
     runTypographyDiagnostic
 
-  // Run on startup in development mode
+  // Run lazily on idle in development mode to avoid blocking cold-start rendering
   if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) {
-    document.fonts.ready.then(() => {
-      runTypographyDiagnostic().then((report) => {
-        console.group('[Typography Diagnostic]')
-        console.log('Intended Family:', report.intendedFont)
-        console.log('SF Pro Display Active:', report.sfProDisplayStatus ? '✓ YES' : '✗ NO')
-        console.log(
-          'Physical Glyphs Verified (Canvas metrics):',
-          report.canvasMetrics.isUsingSfProGlyphs ? '✓ TRUE (SF Pro)' : '✗ FALLBACK (Segoe UI)'
-        )
-        console.log(
-          'Widths comparison:',
-          `SF Pro=${report.canvasMetrics.sfProWidth.toFixed(1)}px vs Segoe=${report.canvasMetrics.segoeWidth.toFixed(1)}px`
-        )
-        console.log('DPR / Scale Factor:', report.devicePixelRatio)
-        console.log('Renderer Zoom Factor:', report.rendererZoomFactor)
-        console.log('Window Dimensions:', `${report.windowBounds.width} x ${report.windowBounds.height}`)
-        console.log('Computed Font on Body:', report.sampleComputedStyles.bodyFont)
-        console.log('Font Faces Detail:', report.fontFaces)
-        if (report.fontLoadingErrors.length > 0) {
-          console.error('Font Loading Errors:', report.fontLoadingErrors)
-        } else {
-          console.log('Font Loading Errors: None (all fonts clean)')
-        }
-        console.groupEnd()
+    const scheduleDiagnostic = () => {
+      document.fonts.ready.then(() => {
+        runTypographyDiagnostic().then((report) => {
+          console.group('[Typography Diagnostic]')
+          console.log('Intended Family:', report.intendedFont)
+          console.log('SF Pro Display Active:', report.sfProDisplayStatus ? '✓ YES' : '✗ NO')
+          console.log(
+            'Physical Glyphs Verified (Canvas metrics):',
+            report.canvasMetrics.isUsingSfProGlyphs ? '✓ TRUE (SF Pro)' : '✗ FALLBACK (Segoe UI)'
+          )
+          console.log(
+            'Widths comparison:',
+            `SF Pro=${report.canvasMetrics.sfProWidth.toFixed(1)}px vs Segoe=${report.canvasMetrics.segoeWidth.toFixed(1)}px`
+          )
+          console.log('DPR / Scale Factor:', report.devicePixelRatio)
+          console.log('Renderer Zoom Factor:', report.rendererZoomFactor)
+          console.log('Window Dimensions:', `${report.windowBounds.width} x ${report.windowBounds.height}`)
+          console.log('Computed Font on Body:', report.sampleComputedStyles.bodyFont)
+          console.log('Font Faces Detail:', report.fontFaces)
+          if (report.fontLoadingErrors.length > 0) {
+            console.error('Font Loading Errors:', report.fontLoadingErrors)
+          } else {
+            console.log('Font Loading Errors: None (all fonts clean)')
+          }
+          console.groupEnd()
+        })
       })
-    })
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(scheduleDiagnostic, { timeout: 5000 })
+    } else {
+      setTimeout(scheduleDiagnostic, 4000)
+    }
   }
 }
