@@ -10,13 +10,13 @@ interface EnergySaverPillProps {
   onClick?: () => void
 }
 
-// ── Timing & Physics ──────────────────────────────────────────────────────────
+// â”€â”€ Timing & Physics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PILL_SPRING = { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 }
 
 const COMPACT_W = 205
 const COMPACT_H = 33
 
-// ── Leaf / Eco SVG Icon ───────────────────────────────────────────────────────
+// â”€â”€ Leaf / Eco SVG Icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LeafIcon: React.FC<{ size?: number; className?: string; off?: boolean }> = ({
   size = 14,
   off = false
@@ -126,7 +126,7 @@ export const EnergySaverPill: React.FC<EnergySaverPillProps> = ({
               <LeafIcon size={14} off={!isOn} />
               <span
                 style={{
-                  fontFamily: 'var(--font-sans)',
+                  fontFamily: 'var(--font-ui)',
                   fontSize: '11.5px',
                   fontWeight: 600,
                   color: '#FFFFFF',

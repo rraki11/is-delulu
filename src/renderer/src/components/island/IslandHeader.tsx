@@ -87,7 +87,7 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
         <span
           className="font-display"
           style={{
-            fontFamily: 'var(--font-display)',
+            fontFamily: 'var(--font-ui)',
             fontSize: '13px',
             fontWeight: 500,
             lineHeight: '16px',
@@ -97,11 +97,11 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
         >
           {greeting}
         </span>
-        <span style={{ fontSize: '11px', lineHeight: '16px', color: 'var(--text-muted)' }}>â€¢</span>
+        <span style={{ fontSize: '11px', lineHeight: '16px', color: 'var(--text-muted)' }}>•</span>
         <span
-          className="tabular-nums font-display"
+          className="tabular-nums font-mono"
           style={{
-            fontFamily: 'var(--font-display)',
+            fontFamily: 'var(--font-mono)',
             fontSize: '12px',
             color: 'var(--text-secondary)',
             fontWeight: 500,

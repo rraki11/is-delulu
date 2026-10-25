@@ -11,13 +11,13 @@ interface LowBatteryPillProps {
   onClick?: () => void
 }
 
-// ── Timing & Physics ──────────────────────────────────────────────────────────
+// â”€â”€ Timing & Physics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PILL_SPRING = { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 }
 
 const COMPACT_W = 205
 const COMPACT_H = 33
 
-// ── Battery Level Indicator SVG Icon ──────────────────────────────────────────
+// â”€â”€ Battery Level Indicator SVG Icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LowBatteryIcon: React.FC<{ percent: number }> = ({ percent }) => {
   const clamped = Math.max(4, Math.min(100, percent))
   const innerWidth = (clamped / 100) * 16 // 16px max inner width
@@ -83,7 +83,7 @@ export const LowBatteryPill: React.FC<LowBatteryPillProps> = ({
       {isVisible && (
         <motion.div
           key="low-battery-pill-outer"
-          aria-label={`Low Battery — ${displayPercent}%`}
+          aria-label={`Low Battery â€” ${displayPercent}%`}
           aria-live="assertive"
           initial={{ y: -COMPACT_H - 20, opacity: 0, scale: 0.94 }}
           animate={{
@@ -146,7 +146,7 @@ export const LowBatteryPill: React.FC<LowBatteryPillProps> = ({
             {/* Left: Low Battery text */}
             <span
               style={{
-                fontFamily: 'var(--font-sans)',
+                fontFamily: 'var(--font-ui)',
                 fontSize: '11.5px',
                 fontWeight: 600,
                 color: '#FFFFFF',
@@ -159,9 +159,9 @@ export const LowBatteryPill: React.FC<LowBatteryPillProps> = ({
             {/* Right: Percentage and battery indicator */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span
-                className="tabular-nums"
+                className="tabular-nums font-mono"
                 style={{
-                  fontFamily: 'var(--font-display)',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '12px',
                   fontWeight: 600,
                   color: '#EF4444',

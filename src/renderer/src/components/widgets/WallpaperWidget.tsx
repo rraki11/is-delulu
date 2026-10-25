@@ -493,7 +493,7 @@ export const WallpaperWidget: React.FC = () => {
     setActiveCenter(targetIndex)
   }
 
-  // Virtualized indices: only render cards within ±5 offsets of activeCenter (11 cards max)
+  // Virtualized indices: only render cards within Â±5 offsets of activeCenter (11 cards max)
   const visibleCards = useMemo(() => {
     if (count === 0) return []
     const cards: { wall: WallpaperItem; offset: number; index: number }[] = []
@@ -530,7 +530,7 @@ export const WallpaperWidget: React.FC = () => {
         userSelect: 'none'
       }}
     >
-      {/* ── Top Header Controls ─────────────────────────────────────────── */}
+      {/* â”€â”€ Top Header Controls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         style={{
           display: 'flex',
@@ -606,7 +606,7 @@ export const WallpaperWidget: React.FC = () => {
         </button>
       </div>
 
-      {/* ── 3D Perspective Carousel Track ───────────────────────────── */}
+      {/* â”€â”€ 3D Perspective Carousel Track â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
@@ -700,7 +700,7 @@ export const WallpaperWidget: React.FC = () => {
         ))}
       </div>
 
-      {/* ── Bottom Controls & Scrubber ───────────────────────────────────── */}
+      {/* â”€â”€ Bottom Controls & Scrubber â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         style={{
           display: 'flex',
@@ -747,7 +747,9 @@ export const WallpaperWidget: React.FC = () => {
           </div>
 
           <span
+            className="tabular-nums font-mono"
             style={{
+              fontFamily: 'var(--font-mono)',
               fontSize: '11px',
               color: '#8E919A',
               fontVariantNumeric: 'tabular-nums',

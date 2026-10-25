@@ -647,9 +647,9 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               }}
             >
               <span
-                className="tabular-nums"
+                className="tabular-nums font-mono"
                 style={{
-                  fontFamily: 'var(--font-display)',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '12px',
                   fontWeight: 500,
                   color: '#F4F5F0',

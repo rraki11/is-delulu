@@ -180,6 +180,80 @@
   font-display: swap;
 }
 
+/* -------------------------------------------------------------
+ * Google Sans Code Monospace Font-Face Directives
+ * Geometric fixed-width typeface by Google & Universal Thirst
+ * Variable font with weight axis 300 - 800 and mono axis
+ * Licensed under SIL Open Font License, Version 1.1
+ * ------------------------------------------------------------- */
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: normal;
+  font-weight: 300 800;
+  src:
+    local('Google Sans Code Regular'),
+    local('Google Sans Code'),
+    local('GoogleSansCode-Regular'),
+    url('../assets/fonts/GoogleSansCode.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: normal;
+  font-weight: 400;
+  src:
+    local('Google Sans Code Regular'),
+    local('Google Sans Code'),
+    local('GoogleSansCode-Regular'),
+    url('../assets/fonts/GoogleSansCode.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: normal;
+  font-weight: 500;
+  src:
+    local('Google Sans Code Medium'),
+    local('Google Sans Code'),
+    url('../assets/fonts/GoogleSansCode.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: normal;
+  font-weight: 600;
+  src:
+    local('Google Sans Code SemiBold'),
+    local('Google Sans Code'),
+    url('../assets/fonts/GoogleSansCode.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: normal;
+  font-weight: 700;
+  src:
+    local('Google Sans Code Bold'),
+    local('Google Sans Code'),
+    url('../assets/fonts/GoogleSansCode.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Google Sans Code';
+  font-style: italic;
+  font-weight: 300 800;
+  src:
+    local('Google Sans Code Italic'),
+    local('GoogleSansCode-Italic'),
+    url('../assets/fonts/GoogleSansCode-Italic.ttf') format('truetype');
+  font-display: swap;
+}
+
 /* Reset & Window Setup */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -196,7 +270,7 @@ button, input, select, textarea {
 input::placeholder,
 textarea::placeholder {
   color: var(--text-muted);
-  font-family: var(--font-text);
+  font-family: var(--font-ui);
   font-size: inherit;
   line-height: inherit;
   opacity: 0.85;
@@ -209,8 +283,8 @@ html, body {
   background: transparent !important;
   background-color: transparent !important;
   color: var(--text-primary);
-  /* Typography: Prefer SF Pro Text/Display with Segoe UI system fallbacks */
-  font-family: var(--font-text);
+  /* Typography: Prefer SF Pro Display with system fallbacks */
+  font-family: var(--font-ui);
   letter-spacing: var(--tracking-text);
   user-select: none;
   -webkit-font-smoothing: antialiased;
@@ -228,6 +302,10 @@ html, body {
 }
 
 /* Typography Utility Classes */
+.font-ui {
+  font-family: var(--font-ui) !important;
+}
+
 .font-display {
   font-family: var(--font-display) !important;
   letter-spacing: var(--tracking-display);
@@ -240,6 +318,12 @@ html, body {
 
 .font-mono {
   font-family: var(--font-mono) !important;
+}
+
+.font-metric {
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 /* Numeric tabular alignment for clocks, timers, dates */
@@ -898,7 +982,7 @@ html, body {
   padding: 2px 6px 2px 4px;
   white-space: nowrap;
   color: var(--accent);
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   /* Intense outer glow on the head bubble */
   box-shadow:

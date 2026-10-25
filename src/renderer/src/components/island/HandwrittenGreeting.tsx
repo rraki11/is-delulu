@@ -123,7 +123,7 @@ export const HandwrittenGreeting: React.FC<HandwrittenGreetingProps> = ({
       <span
         className="handwriting-reveal-text"
         style={{
-          fontFamily: "'Caveat', cursive, 'SF Pro Display', system-ui, sans-serif",
+          fontFamily: "'Caveat', cursive, var(--font-ui), system-ui, sans-serif",
           fontSize: '22px',
           fontWeight: 500,
           color: 'rgba(244, 245, 240, 0.95)',

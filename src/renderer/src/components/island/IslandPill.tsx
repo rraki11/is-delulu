@@ -75,9 +75,9 @@ export const IslandPill: React.FC<IslandPillProps> = ({ onExpand }) => {
 
       {/* Minimal Digital Clock */}
       <span
-        className="tabular-nums font-display"
+        className="tabular-nums font-mono"
         style={{
-          fontFamily: 'var(--font-display)',
+          fontFamily: 'var(--font-mono)',
           fontSize: '12px',
           fontWeight: 500,
           color: '#F4F5F0',

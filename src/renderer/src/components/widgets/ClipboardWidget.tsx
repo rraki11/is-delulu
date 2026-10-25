@@ -127,7 +127,7 @@ export const ClipboardWidget: React.FC = () => {
         userSelect: 'none'
       }}
     >
-      {/* ── Search Bar & Filter Chips Header ────────────────────────── */}
+      {/* â”€â”€ Search Bar & Filter Chips Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         style={{
           display: 'flex',
@@ -150,7 +150,7 @@ export const ClipboardWidget: React.FC = () => {
               setSearch(e.target.value)
               setSelectedIndex(0)
             }}
-            placeholder={`Search ${allItems.length} items…`}
+            placeholder={`Search ${allItems.length} itemsâ€¦`}
             style={{
               background: 'none',
               border: 'none',
@@ -193,7 +193,7 @@ export const ClipboardWidget: React.FC = () => {
         <Settings size={15} color="#6E727A" style={{ cursor: 'pointer' }} />
       </div>
 
-      {/* ── Split Layout: Item List + Inspector ─────────────────────── */}
+      {/* â”€â”€ Split Layout: Item List + Inspector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '12px', flex: 1, minHeight: 0 }}>
         {/* Item List */}
         <div
@@ -242,6 +242,7 @@ export const ClipboardWidget: React.FC = () => {
                       fontSize: '12px',
                       color: isSelected ? '#FFFFFF' : '#D0D2D8',
                       fontWeight: isSelected ? 600 : 400,
+                      fontFamily: item.type === 'code' ? 'var(--font-mono)' : 'var(--font-ui)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -254,7 +255,7 @@ export const ClipboardWidget: React.FC = () => {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
                   {isPinned && <Pin size={11} color="var(--hitodama-accent, #D7B56D)" fill="var(--hitodama-accent, #D7B56D)" />}
-                  <span style={{ fontSize: '10px', color: '#6E727A', whiteSpace: 'nowrap' }}>
+                  <span className="tabular-nums font-mono" style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6E727A', whiteSpace: 'nowrap' }}>
                     {formatTimestamp(item.timestamp).split(', ')[1]}
                   </span>
                 </div>
@@ -304,13 +305,13 @@ export const ClipboardWidget: React.FC = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#6E727A', fontWeight: 500 }}>Size</span>
-              <span style={{ color: '#D0D2D8' }}>
+              <span className="tabular-nums font-mono" style={{ fontFamily: 'var(--font-mono)', color: '#D0D2D8' }}>
                 {charCount} characters · {wordCount} words · {lineCount} line{lineCount > 1 ? 's' : ''}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#6E727A', fontWeight: 500 }}>Copied</span>
-              <span style={{ color: '#D0D2D8' }}>
+              <span className="tabular-nums font-mono" style={{ fontFamily: 'var(--font-mono)', color: '#D0D2D8' }}>
                 {selectedItem ? formatTimestamp(selectedItem.timestamp) : '—'}
               </span>
             </div>
@@ -344,7 +345,7 @@ export const ClipboardWidget: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Keyboard Shortcuts Legend Bar ────────────────────────────── */}
+      {/* â”€â”€ Keyboard Shortcuts Legend Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         style={{
           display: 'flex',
@@ -356,13 +357,13 @@ export const ClipboardWidget: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <span><kbd style={{ backgroundColor: '#26282E', padding: '1px 5px', borderRadius: '3px', marginRight: '4px' }}>↵</kbd> Paste</span>
+          <span><kbd style={{ backgroundColor: '#26282E', padding: '1px 5px', borderRadius: '3px', marginRight: '4px' }}>â†µ</kbd> Paste</span>
           <span><kbd style={{ backgroundColor: '#26282E', padding: '1px 5px', borderRadius: '3px', marginRight: '4px' }}>Ctrl C</kbd> Copy</span>
           <span><kbd style={{ backgroundColor: '#26282E', padding: '1px 5px', borderRadius: '3px', marginRight: '4px' }}>Ctrl P</kbd> Pin</span>
           <span><kbd style={{ backgroundColor: '#26282E', padding: '1px 5px', borderRadius: '3px', marginRight: '4px' }}>Del</kbd> Remove</span>
         </div>
         <span style={{ color: '#6E727A' }}>
-          ↑↓ Move  ·  Tab Filter
+          â†‘â†“ Move  Â·  Tab Filter
         </span>
       </div>
     </div>

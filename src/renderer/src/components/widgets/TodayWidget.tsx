@@ -113,9 +113,9 @@ export const TodayWidget: React.FC = () => {
         userSelect: 'none'
       }}
     >
-      {/* ── Left Rail: Clock & Weather Cards ─────────────────────────── */}
+      {/* â”€â”€ Left Rail: Clock & Weather Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '176px' }}>
-        {/* Large Digital Clock Card (176px × 214px) */}
+        {/* Large Digital Clock Card (176px Ã— 214px) */}
         <div
           style={{
             width: '176px',
@@ -133,7 +133,9 @@ export const TodayWidget: React.FC = () => {
         >
           {/* Hour */}
           <span
+            className="tabular-nums font-mono"
             style={{
+              fontFamily: 'var(--font-mono)',
               fontSize: '54px',
               fontWeight: 700,
               color: '#F4F5F7',
@@ -163,7 +165,9 @@ export const TodayWidget: React.FC = () => {
 
           {/* Minute */}
           <span
+            className="tabular-nums font-mono"
             style={{
+              fontFamily: 'var(--font-mono)',
               fontSize: '54px',
               fontWeight: 700,
               color: '#F4F5F7',
@@ -184,11 +188,11 @@ export const TodayWidget: React.FC = () => {
               letterSpacing: '0.02em'
             }}
           >
-            {timeState.period ? `${timeState.period} · ` : ''}{timeState.dayStr}
+            {timeState.period ? `${timeState.period} Â· ` : ''}{timeState.dayStr}
           </span>
         </div>
 
-        {/* Weather Card (176px × 142px) */}
+        {/* Weather Card (176px Ã— 142px) */}
         <div
           style={{
             width: '176px',
@@ -205,10 +209,10 @@ export const TodayWidget: React.FC = () => {
           }}
         >
           <Sun size={32} color="#F2C94C" strokeWidth={2} />
-          <span style={{ fontSize: '24px', fontWeight: 700, color: '#F4F5F7' }}>
+          <span className="tabular-nums font-mono" style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: '#F4F5F7' }}>
             32°C
           </span>
-          <span style={{ fontSize: '11px', color: '#8E919A', fontWeight: 500 }}>
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', color: '#8E919A', fontWeight: 500 }}>
             Mostly clear
           </span>
         </div>
@@ -233,10 +237,10 @@ export const TodayWidget: React.FC = () => {
         >
           {/* Calendar Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#F4F5F7' }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 600, color: '#F4F5F7' }}>
               This week
             </span>
-            <span style={{ fontSize: '11px', color: '#8E919A', fontWeight: 500 }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', color: '#8E919A', fontWeight: 500 }}>
               Sep 28 – Oct 4
             </span>
           </div>
@@ -257,11 +261,13 @@ export const TodayWidget: React.FC = () => {
                     gap: '4px'
                   }}
                 >
-                  <span style={{ fontSize: '11px', color: '#6E727A', fontWeight: 500 }}>
+                  <span style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', color: '#6E727A', fontWeight: 500 }}>
                     {day}
                   </span>
                   <div
+                    className="tabular-nums font-mono"
                     style={{
+                      fontFamily: 'var(--font-mono)',
                       width: '28px',
                       height: '28px',
                       borderRadius: '50%',
@@ -302,7 +308,7 @@ export const TodayWidget: React.FC = () => {
             />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--hitodama-accent, #D7B56D)' }}>
-                Next · 11:00 AM
+                Next Â· 11:00 AM
               </span>
               <span style={{ fontSize: '11px', color: '#8E919A' }}>
                 Daily AI news research
@@ -311,7 +317,7 @@ export const TodayWidget: React.FC = () => {
           </div>
         </div>
 
-        {/* To-Do / Timer Card (354px × 174px) */}
+        {/* To-Do / Timer Card (354px Ã— 174px) */}
         <div
           style={{
             width: '354px',
@@ -470,7 +476,7 @@ export const TodayWidget: React.FC = () => {
               }}
             >
               <Plus size={14} />
-              <span>Add a to-do…</span>
+              <span>Add a to-doâ€¦</span>
             </button>
           )}
         </div>

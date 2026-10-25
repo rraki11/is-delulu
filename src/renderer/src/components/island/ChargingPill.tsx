@@ -16,12 +16,12 @@ export interface ChargingPillProps {
   isDirectHandoff?: boolean
 }
 
-// ── Timing & Physics ──────────────────────────────────────────────────────────
+// â”€â”€ Timing & Physics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Restrained spring for fluid, native system feel (no bouncy overshoot)
 export const PILL_SPRING = { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 }
 export const FADE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
-// ── Dimensions ────────────────────────────────────────────────────────────────
+// â”€â”€ Dimensions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Compact geometry matches collapsed island for seamless morphing
 export const COMPACT_W = 190
 export const COMPACT_H = 33
@@ -29,7 +29,7 @@ export const COMPACT_H = 33
 export const EXPANDED_W = 320
 export const EXPANDED_H = 42
 
-// ── Lightning bolt SVG ────────────────────────────────────────────────────────
+// â”€â”€ Lightning bolt SVG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const BoltIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, className }) => (
   <svg
     width={size}
@@ -43,7 +43,7 @@ export const BoltIcon: React.FC<{ size?: number; className?: string }> = ({ size
   </svg>
 )
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function formatMinutes(mins: number): string {
   if (mins < 60) return `~${mins}m`
   const h = Math.floor(mins / 60)
@@ -145,9 +145,9 @@ export const ChargingContent: React.FC<ChargingContentProps> = ({
 
             {/* Right: Percentage */}
             <span
-              className="tabular-nums charging-percent"
+              className="tabular-nums charging-percent font-mono"
               style={{
-                fontFamily: 'var(--font-display)',
+                fontFamily: 'var(--font-mono)',
                 fontSize: '12px',
                 fontWeight: 600,
                 letterSpacing: '0'
@@ -190,7 +190,7 @@ export const ChargingContent: React.FC<ChargingContentProps> = ({
                 }}
               />
 
-              {/* Leading edge indicator bubble — bolt + % */}
+              {/* Leading edge indicator bubble â€” bolt + % */}
               <div
                 className="charging-bar-head"
                 style={{ left: `${headBubbleLeft}%` }}
@@ -208,12 +208,12 @@ export const ChargingContent: React.FC<ChargingContentProps> = ({
             {/* Estimated time remaining */}
             {batteryState?.minutesRemaining != null && batteryState.minutesRemaining > 0 && (
               <motion.span
-                className="charging-time-remaining"
+                className="charging-time-remaining tabular-nums font-mono"
                 initial={{ opacity: 0, x: 6 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.15, duration: 0.2, ease: 'easeOut' }}
                 style={{
-                  fontFamily: 'var(--font-display)',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '11px',
                   fontWeight: 500,
                   whiteSpace: 'nowrap',

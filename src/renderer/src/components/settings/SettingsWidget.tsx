@@ -424,7 +424,7 @@ export const SettingsWidget: React.FC = () => {
                   boxShadow: '0 0 8px var(--accent-glow)'
                 }}
               />
-              <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+              <span className="tabular-nums font-mono" style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
                 {accentPalette.primary}
               </span>
             </div>
@@ -573,7 +573,7 @@ export const SettingsWidget: React.FC = () => {
                   }}
                   title="Pick custom color"
                 />
-                <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+                <span className="tabular-nums font-mono" style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
                   {preferences?.manualAccentColor || '#8B5CF6'}
                 </span>
               </div>
@@ -730,7 +730,7 @@ export const SettingsWidget: React.FC = () => {
             border: '1px solid var(--border-subtle)',
             borderRadius: '4px',
             color: 'var(--text-primary)',
-            fontFamily: 'monospace'
+            fontFamily: 'var(--font-mono)'
           }}
         >
           Ctrl + Shift + Space

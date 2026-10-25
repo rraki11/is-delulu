@@ -119,6 +119,7 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
                 fontSize: '12px',
                 fontWeight: isActive ? 600 : 500,
                 letterSpacing: '-0.01em',
+                fontFamily: 'var(--font-ui)',
                 position: 'relative',
                 background: 'transparent',
                 color: isActive

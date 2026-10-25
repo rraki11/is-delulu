@@ -104,7 +104,7 @@ export const ControlsWidget: React.FC = () => {
         userSelect: 'none'
       }}
     >
-      {/* ── Row 1 Tiles: Wi-Fi, Bluetooth, Audio ──────────────────────── */}
+      {/* â”€â”€ Row 1 Tiles: Wi-Fi, Bluetooth, Audio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         style={{
           display: 'grid',
@@ -230,7 +230,7 @@ export const ControlsWidget: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* ── Row 2 Tiles: Night Light, Dark Mode ───────────────────────── */}
+      {/* â”€â”€ Row 2 Tiles: Night Light, Dark Mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         style={{
           display: 'grid',
@@ -313,7 +313,7 @@ export const ControlsWidget: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* ── Row 3: Master Volume Slider ──────────────────────────────── */}
+      {/* â”€â”€ Row 3: Master Volume Slider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         onClick={handleVolumeChange}
         style={{
@@ -356,7 +356,9 @@ export const ControlsWidget: React.FC = () => {
         >
           <Volume2 size={16} strokeWidth={2.2} color={volume > 8 ? '#141310' : '#8E919A'} />
           <span
+            className="tabular-nums font-mono"
             style={{
+              fontFamily: 'var(--font-mono)',
               fontSize: '12px',
               fontWeight: 600,
               color: volume > 92 ? '#141310' : '#F4F5F7'
@@ -367,7 +369,7 @@ export const ControlsWidget: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Row 4: Integrated Media Player Card ───────────────────────── */}
+      {/* â”€â”€ Row 4: Integrated Media Player Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         style={{
           width: '100%',
@@ -543,8 +545,8 @@ export const ControlsWidget: React.FC = () => {
               fontWeight: 500
             }}
           >
-            <span>{formatTime(positionSec)}</span>
-            <span>{formatTime(durationSec)}</span>
+            <span className="tabular-nums font-mono" style={{ fontFamily: 'var(--font-mono)' }}>{formatTime(positionSec)}</span>
+            <span className="tabular-nums font-mono" style={{ fontFamily: 'var(--font-mono)' }}>{formatTime(durationSec)}</span>
           </div>
         </div>
       </div>

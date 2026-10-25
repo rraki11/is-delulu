@@ -32,10 +32,11 @@
   --accent-primary: var(--wallpaper-accent-primary, #D7B56D);
   --hitodama-gold: #D7B56D;
 
-  /* Typography - Soft Off-White with Muted Neutral Gray Secondary */
-  --font-display: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
-  --font-text: 'SF Pro Display', 'SF Pro Text', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  /* Centralized Typography Tokens - SF Pro Display (UI) + Google Sans Code (Mono/Metrics) */
+  --font-ui: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --font-display: var(--font-ui);
+  --font-text: var(--font-ui);
+  --font-mono: 'Google Sans Code', ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
   --tracking-display: 0;
   --tracking-text: 0;
   --tracking-caps: 0.04em;
@@ -144,10 +145,11 @@
   --hitodama-accent: var(--wallpaper-accent-primary, #6366F1);
   --accent-primary: var(--wallpaper-accent-primary, #6366F1);
 
-  /* Typography - Clean macOS-Grade Contrast */
-  --font-display: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
-  --font-text: 'SF Pro Display', 'SF Pro Text', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  /* Centralized Typography Tokens - SF Pro Display (UI) + Google Sans Code (Mono/Metrics) */
+  --font-ui: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --font-display: var(--font-ui);
+  --font-text: var(--font-ui);
+  --font-mono: 'Google Sans Code', ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
   --tracking-display: 0;
   --tracking-text: 0;
   --tracking-caps: 0.04em;

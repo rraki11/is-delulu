@@ -1,13 +1,16 @@
 /**
  * Typography Diagnostic Utility (Development Only)
  * Inspects physical font face readiness, computed styles, devicePixelRatio,
- * zoom factor, error states, and performs canvas metric verification to prove SF Pro is physically rendering glyphs.
+ * zoom factor, error states, and performs canvas metric verification to prove SF Pro Display
+ * and Google Sans Code are physically loaded and rendering glyphs correctly.
  */
 
 export interface TypographyDiagnosticReport {
-  intendedFont: string
+  intendedPrimaryUIFont: string
+  intendedMonospaceFont: string
   sfProDisplayStatus: boolean
   sfProTextStatus: boolean
+  googleSansCodeStatus: boolean
   devicePixelRatio: number
   rendererZoomFactor: number
   windowBounds: { width: number; height: number }
@@ -19,11 +22,19 @@ export interface TypographyDiagnosticReport {
     segoeWidth: number
     arialWidth: number
     isUsingSfProGlyphs: boolean
+    googleSansCodeMonoCharWidths: {
+      charI: number
+      charW: number
+      charM: number
+      charZero: number
+      isStrictlyMonospace: boolean
+    }
   }
   sampleComputedStyles: {
     greetingFont: string
     greetingWeight: string
     pillClockFont: string
+    metricFont: string
     bodyFont: string
   }
 }
@@ -46,6 +57,11 @@ export async function runTypographyDiagnostic(): Promise<TypographyDiagnosticRep
   let segoeWidth = 0
   let arialWidth = 0
 
+  let charI = 0
+  let charW = 0
+  let charM = 0
+  let charZero = 0
+
   if (ctx) {
     ctx.font = '16px "SF Pro Display"'
     sfProWidth = ctx.measureText(sampleText).width
@@ -55,7 +71,17 @@ export async function runTypographyDiagnostic(): Promise<TypographyDiagnosticRep
 
     ctx.font = '16px Arial'
     arialWidth = ctx.measureText(sampleText).width
+
+    // Test Google Sans Code monospace advance equality
+    ctx.font = '16px "Google Sans Code"'
+    charI = ctx.measureText('i').width
+    charW = ctx.measureText('w').width
+    charM = ctx.measureText('M').width
+    charZero = ctx.measureText('0').width
   }
+
+  const isStrictlyMonospace =
+    charI > 0 && Math.abs(charI - charW) < 0.05 && Math.abs(charW - charM) < 0.05
 
   const fontFaces: Array<{ family: string; weight: string; style: string; status: string }> = []
   document.fonts.forEach((f) => {
@@ -71,7 +97,8 @@ export async function runTypographyDiagnostic(): Promise<TypographyDiagnosticRep
   })
 
   const greetingEl = document.querySelector('.font-display')
-  const pillClockEl = document.querySelector('#island-surface .tabular-nums')
+  const pillClockEl = document.querySelector('#island-surface .tabular-nums, .island-header .tabular-nums')
+  const metricEl = document.querySelector('.tabular-nums.font-mono, .charging-percent')
 
   // Calculate renderer zoom factor
   let zoomFactor = 1.0
@@ -87,9 +114,11 @@ export async function runTypographyDiagnostic(): Promise<TypographyDiagnosticRep
   }
 
   const report: TypographyDiagnosticReport = {
-    intendedFont: 'SF Pro Display',
+    intendedPrimaryUIFont: 'SF Pro Display',
+    intendedMonospaceFont: 'Google Sans Code',
     sfProDisplayStatus: document.fonts.check('16px "SF Pro Display"'),
     sfProTextStatus: document.fonts.check('16px "SF Pro Text"'),
+    googleSansCodeStatus: document.fonts.check('16px "Google Sans Code"'),
     devicePixelRatio: window.devicePixelRatio,
     rendererZoomFactor: zoomFactor,
     windowBounds: { width: window.innerWidth, height: window.innerHeight },
@@ -100,12 +129,20 @@ export async function runTypographyDiagnostic(): Promise<TypographyDiagnosticRep
       sfProWidth,
       segoeWidth,
       arialWidth,
-      isUsingSfProGlyphs: sfProWidth > 0 && Math.abs(sfProWidth - segoeWidth) > 1
+      isUsingSfProGlyphs: sfProWidth > 0 && Math.abs(sfProWidth - segoeWidth) > 1,
+      googleSansCodeMonoCharWidths: {
+        charI,
+        charW,
+        charM,
+        charZero,
+        isStrictlyMonospace
+      }
     },
     sampleComputedStyles: {
       greetingFont: greetingEl ? window.getComputedStyle(greetingEl).fontFamily : 'not found',
       greetingWeight: greetingEl ? window.getComputedStyle(greetingEl).fontWeight : 'not found',
       pillClockFont: pillClockEl ? window.getComputedStyle(pillClockEl).fontFamily : 'not found',
+      metricFont: metricEl ? window.getComputedStyle(metricEl).fontFamily : 'not found',
       bodyFont: window.getComputedStyle(document.body).fontFamily
     }
   }
@@ -124,21 +161,23 @@ if (typeof window !== 'undefined') {
       document.fonts.ready.then(() => {
         runTypographyDiagnostic().then((report) => {
           console.group('[Typography Diagnostic]')
-          console.log('Intended Family:', report.intendedFont)
-          console.log('SF Pro Display Active:', report.sfProDisplayStatus ? '✓ YES' : '✗ NO')
+          console.log('Primary UI Font:', report.intendedPrimaryUIFont, report.sfProDisplayStatus ? '✓ LOADED' : '✗ FALLBACK')
+          console.log('Monospace Font:', report.intendedMonospaceFont, report.googleSansCodeStatus ? '✓ LOADED' : '✗ FALLBACK')
           console.log(
             'Physical Glyphs Verified (Canvas metrics):',
             report.canvasMetrics.isUsingSfProGlyphs ? '✓ TRUE (SF Pro)' : '✗ FALLBACK (Segoe UI)'
           )
           console.log(
-            'Widths comparison:',
-            `SF Pro=${report.canvasMetrics.sfProWidth.toFixed(1)}px vs Segoe=${report.canvasMetrics.segoeWidth.toFixed(1)}px`
+            'Google Sans Code Monospace Verified:',
+            report.canvasMetrics.googleSansCodeMonoCharWidths.isStrictlyMonospace ? '✓ TRUE (Equal character advance)' : '✗ FALSE'
           )
           console.log('DPR / Scale Factor:', report.devicePixelRatio)
           console.log('Renderer Zoom Factor:', report.rendererZoomFactor)
           console.log('Window Dimensions:', `${report.windowBounds.width} x ${report.windowBounds.height}`)
           console.log('Computed Font on Body:', report.sampleComputedStyles.bodyFont)
-          console.log('Font Faces Detail:', report.fontFaces)
+          console.log('Computed Font on Greeting:', report.sampleComputedStyles.greetingFont)
+          console.log('Computed Font on Clock:', report.sampleComputedStyles.pillClockFont)
+          console.log('Computed Font on Metrics:', report.sampleComputedStyles.metricFont)
           if (report.fontLoadingErrors.length > 0) {
             console.error('Font Loading Errors:', report.fontLoadingErrors)
           } else {

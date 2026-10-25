@@ -67,7 +67,9 @@ const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
         }}
       >
         <span
+          className="tabular-nums font-mono"
           style={{
+            fontFamily: 'var(--font-mono)',
             fontSize: '14px',
             fontWeight: 700,
             color: '#F4F5F7',
@@ -114,6 +116,7 @@ const StatMetricCard: React.FC<StatMetricCardProps> = ({
       <CircularProgressRing percentage={percentage} color={color} size={66} strokeWidth={5.5} />
       <span
         style={{
+          fontFamily: 'var(--font-ui)',
           fontSize: '12px',
           fontWeight: 700,
           color: '#FFFFFF',
@@ -125,6 +128,7 @@ const StatMetricCard: React.FC<StatMetricCardProps> = ({
       </span>
       <span
         style={{
+          fontFamily: 'var(--font-ui)',
           fontSize: '9.5px',
           color: '#8E919A',
           maxWidth: '100%',
@@ -152,10 +156,12 @@ const StatMetricCard: React.FC<StatMetricCardProps> = ({
         {chips.map((chip, idx) => (
           <span
             key={idx}
+            className="tabular-nums font-mono"
             style={{
               padding: '2px 6px',
               borderRadius: '5px',
               backgroundColor: 'rgba(255, 255, 255, 0.06)',
+              fontFamily: 'var(--font-mono)',
               fontSize: '9.5px',
               fontWeight: 500,
               color: '#C0C3CC',
@@ -261,7 +267,7 @@ export const StatsWidget: React.FC = () => {
         userSelect: 'none'
       }}
     >
-      {/* ── Left Column: Prominent Metric Cards & System Rail ──────────────── */}
+      {/* â”€â”€ Left Column: Prominent Metric Cards & System Rail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {/* Row 1: Three distinct circular usage cards (CPU, GPU, RAM) */}
         <div
@@ -320,11 +326,13 @@ export const StatsWidget: React.FC = () => {
               minWidth: 0
             }}
           >
-            <span style={{ fontSize: '9px', fontWeight: 600, color: '#7E828C', letterSpacing: '0.04em' }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', fontWeight: 600, color: '#7E828C', letterSpacing: '0.04em' }}>
               DISK C:
             </span>
             <span
+              className="tabular-nums font-mono"
               style={{
+                fontFamily: 'var(--font-mono)',
                 fontSize: '12.5px',
                 fontWeight: 700,
                 color: '#F4F5F7',
@@ -350,11 +358,13 @@ export const StatsWidget: React.FC = () => {
               minWidth: 0
             }}
           >
-            <span style={{ fontSize: '9px', fontWeight: 600, color: '#7E828C', letterSpacing: '0.04em' }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', fontWeight: 600, color: '#7E828C', letterSpacing: '0.04em' }}>
               NETWORK
             </span>
             <span
+              className="tabular-nums font-mono"
               style={{
+                fontFamily: 'var(--font-mono)',
                 fontSize: '11.5px',
                 fontWeight: 700,
                 color: '#F4F5F7',
@@ -380,11 +390,13 @@ export const StatsWidget: React.FC = () => {
               minWidth: 0
             }}
           >
-            <span style={{ fontSize: '9px', fontWeight: 600, color: '#7E828C', letterSpacing: '0.04em' }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', fontWeight: 600, color: '#7E828C', letterSpacing: '0.04em' }}>
               UP FOR
             </span>
             <span
+              className="tabular-nums font-mono"
               style={{
+                fontFamily: 'var(--font-mono)',
                 fontSize: '12.5px',
                 fontWeight: 700,
                 color: '#F4F5F7',
@@ -399,7 +411,7 @@ export const StatsWidget: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Right Column: Top Apps & Load History ──────────────────────────── */}
+      {/* â”€â”€ Right Column: Top Apps & Load History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {/* Top Apps Card */}
         <div
@@ -416,7 +428,7 @@ export const StatsWidget: React.FC = () => {
           {/* Header with Sort Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', fontWeight: 600, color: '#F4F5F7' }}>
-              Top apps · {sortBy}
+              Top apps Â· {sortBy}
             </span>
             <button
               onClick={() => setSortBy(sortBy === 'RAM' ? 'CPU' : 'RAM')}
@@ -434,7 +446,7 @@ export const StatsWidget: React.FC = () => {
               }}
             >
               <ArrowUpDown size={10} />
-              <span>{sortBy === 'RAM' ? 'CPU ⇄' : 'RAM ⇄'}</span>
+              <span>{sortBy === 'RAM' ? 'CPU â‡„' : 'RAM â‡„'}</span>
             </button>
           </div>
 
@@ -483,6 +495,7 @@ export const StatsWidget: React.FC = () => {
                       </span>
                       <span
                         style={{
+                          fontFamily: 'var(--font-ui)',
                           color: '#D8DAE0',
                           maxWidth: '120px',
                           overflow: 'hidden',
@@ -494,7 +507,15 @@ export const StatsWidget: React.FC = () => {
                         {app.name}
                       </span>
                     </div>
-                    <span style={{ color: '#8E919A', fontWeight: 600, fontSize: '10px' }}>
+                    <span
+                      className="tabular-nums font-mono"
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        color: '#8E919A',
+                        fontWeight: 600,
+                        fontSize: '10px'
+                      }}
+                    >
                       {sortBy === 'RAM'
                         ? app.memFormatted || `${app.ramPercent}%`
                         : `${app.cpuPercent}%`}
