@@ -20,6 +20,8 @@
   --accent-highlight-glow: rgba(0, 240, 255, 0.06);
   --accent-subtle: rgba(163, 230, 53, 0.08);
   --accent-border: rgba(163, 230, 53, 0.32);
+  --hitodama-accent: var(--accent-primary, #D7B56D);
+  --hitodama-gold: #D7B56D;
 
   /* Typography - Soft Off-White with Muted Neutral Gray Secondary */
   --font-display: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;

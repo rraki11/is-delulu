@@ -1,6 +1,24 @@
 export type IslandMode = 'hidden' | 'collapsed' | 'expanded'
 
-export type ExpandedTab = 'launcher' | 'calendar' | 'clipboard' | 'system' | 'media' | 'routines' | 'settings'
+export type ExpandedTab =
+  | 'controls'
+  | 'today'
+  | 'stats'
+  | 'clipboard'
+  | 'apps'
+  | 'wallpaper'
+  | 'power'
+  | 'music'
+  | 'settings'
+  | 'launcher'
+  | 'calendar'
+  | 'system'
+  | 'media'
+  | 'routines'
+
+export type PowerAction = 'lock' | 'sleep' | 'restart' | 'shutdown'
+
+export type QuickSettingTarget = 'wifi' | 'bluetooth' | 'audio' | 'nightlight'
 
 export interface CalendarEvent {
   id: string
@@ -81,6 +99,13 @@ export interface BatteryState {
   minutesRemaining: number | null
 }
 
+export interface TopAppItem {
+  name: string
+  ramPercent: number
+  cpuPercent: number
+  color?: string
+}
+
 export interface SystemStats {
   cpuUsage: number // 0 - 100
   memoryUsedGb: number
@@ -93,6 +118,15 @@ export interface SystemStats {
   cpuModel: string
   batteryPercent: number | null
   isCharging: boolean | null
+  // Extended Hitodama metrics
+  cpuFreqGhz?: number
+  processCount?: number
+  diskUsedGb?: number
+  diskTotalGb?: number
+  diskFreeGb?: number
+  netDownloadKbps?: number
+  netUploadKbps?: number
+  topApps?: TopAppItem[]
 }
 
 export interface ClipboardItem {
@@ -130,6 +164,7 @@ export type MediaControlAction =
   | 'pause'
   | 'next'
   | 'prev'
+  | 'previous'
   | 'forward'
   | 'backward'
   | 'seek'
@@ -146,6 +181,7 @@ export interface MediaSourceItem {
   title: string
   artist: string
   album?: string
+  thumbnailUrl?: string
   status: 'Playing' | 'Paused' | 'Audible' | 'Audio Active' | 'Idle Audio' | 'Closed' | string
   isPlaying: boolean
   isAudioActive: boolean
@@ -172,6 +208,7 @@ export interface MediaSessionItem {
   title: string
   artist: string
   album?: string
+  thumbnailUrl?: string
   status: 'Playing' | 'Paused' | 'Stopped' | 'Closed' | string
   isPlaying: boolean
   positionSec: number
@@ -262,7 +299,13 @@ export interface IsDeluluAPI {
 
   // System statistics
   getSystemStats: () => Promise<SystemStats>
+  getExtendedStats?: () => Promise<SystemStats>
   onSystemStatsUpdate: (callback: (stats: SystemStats) => void) => () => void
+
+  // Quick Controls & Power Actions
+  executePowerAction?: (action: PowerAction) => Promise<ActionResult>
+  openQuickSetting?: (target: QuickSettingTarget) => Promise<ActionResult>
+  setMasterVolume?: (volume: number) => Promise<boolean>
 
   // Clipboard operations
   getClipboardHistory: () => Promise<ClipboardItem[]>

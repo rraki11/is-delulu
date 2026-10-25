@@ -551,6 +551,20 @@ export async function applyWallpaperAsDesktop(
 
     return { success: true, message: 'Desktop wallpaper updated successfully.' }
   } catch (err) {
+    console.warn('[WallpaperGallery] Visual transition failed or timed out, executing direct native fallback:', err)
+    cleanUpActiveOverlay()
+    try {
+      const fallbackApplied = await executeSetWallpaperAsync(filePath)
+      if (fallbackApplied) {
+        transitionSucceeded = true
+        transitionState = 'completed'
+        updatePreferences({ selectedWallpaperPath: filePath })
+        return { success: true, message: 'Wallpaper applied via direct native fallback.' }
+      }
+    } catch (fallbackErr) {
+      console.error('[WallpaperGallery] Direct native wallpaper fallback also failed:', fallbackErr)
+    }
+
     transitionState = 'failed'
     console.error('[WallpaperGallery] Failed to set desktop wallpaper with transition:', err)
     return {

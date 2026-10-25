@@ -229,12 +229,16 @@ export function createMainWindow(): BrowserWindow {
     }
   })
 
-  // Re-center window when screen resolution or DPI scaling changes
-  screen.on('display-metrics-changed', () => {
-    console.log('[is-delulu:display] Display metrics changed, updating metrics and re-centering window')
+  // Re-center window when screen resolution, DPI scaling, or connected displays change
+  const handleDisplayChange = (): void => {
+    console.log('[is-delulu:display] Display configuration changed, updating metrics and re-centering window')
     updateCachedDisplayMetrics()
     enforceCenteredPosition(currentMode)
-  })
+  }
+
+  screen.on('display-metrics-changed', handleDisplayChange)
+  screen.on('display-added', handleDisplayChange)
+  screen.on('display-removed', handleDisplayChange)
 
   // Load renderer
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -484,9 +488,9 @@ export function startActivationMonitor(): void {
 
     // 2. Active surface hit-testing:
     const surfaceWidth =
-      currentMode === 'expanded' ? WINDOW_CONFIG.panel.width : WINDOW_CONFIG.pill.width
+      currentMode === 'expanded' ? 1040 : WINDOW_CONFIG.pill.width
     const surfaceHeight =
-      currentMode === 'expanded' ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height
+      currentMode === 'expanded' ? 640 : WINDOW_CONFIG.pill.height
     const surfaceLeft = centerX - surfaceWidth / 2
     const surfaceRight = centerX + surfaceWidth / 2
     const surfaceTop = workY

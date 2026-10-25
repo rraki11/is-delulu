@@ -29,6 +29,7 @@ export const App: React.FC = () => {
   const currentThemeRef = useRef<'light' | 'dark'>('dark')
   const currentPaletteRef = useRef<AccentPalette | null>(null)
   const cachedSurfaceRectRef = useRef<{ left: number; right: number; top: number; bottom: number } | null>(null)
+  const wasInsidePointerRef = useRef(false)
 
   // Double-rAF handshake: signals to main process once the initial frame is rendered to display window with 0 blank frames
   useEffect(() => {
@@ -690,14 +691,18 @@ export const App: React.FC = () => {
 
       updateMouseHitTest(isInside)
 
-      if (isInside) {
-        handlePointerEnter()
-      } else if (machineState !== 'NORMAL_REVEALING') {
-        handlePointerLeave()
+      if (isInside !== wasInsidePointerRef.current) {
+        wasInsidePointerRef.current = isInside
+        if (isInside) {
+          handlePointerEnter()
+        } else if (machineState !== 'NORMAL_REVEALING') {
+          handlePointerLeave()
+        }
       }
     }
 
     const handleWindowMouseLeave = (): void => {
+      wasInsidePointerRef.current = false
       updateMouseHitTest(false)
       if (!isNotificationActiveRef.current && !preferences?.isPinned && machineState !== 'NORMAL_REVEALING') {
         handlePointerLeave()

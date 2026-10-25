@@ -1,36 +1,30 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence, type Transition } from 'motion/react'
 import { IslandHeader } from './IslandHeader'
-import { NavigationTabBar } from './NavigationTabBar'
+import { NavigationTabBar, normalizeTab } from './NavigationTabBar'
 
-// Lazy-load secondary dashboard widgets so the initial bundle for the collapsed pill is ultra-lightweight
-const CommandSearch = React.lazy(() =>
-  import('../launcher/CommandSearch').then((m) => ({ default: m.CommandSearch }))
-)
-const ShortcutGrid = React.lazy(() =>
-  import('../launcher/ShortcutGrid').then((m) => ({ default: m.ShortcutGrid }))
-)
-const CalendarWidget = React.lazy(() =>
-  import('../widgets/CalendarWidget').then((m) => ({ default: m.CalendarWidget }))
-)
-const SystemWidget = React.lazy(() =>
-  import('../widgets/SystemWidget').then((m) => ({ default: m.SystemWidget }))
-)
-const ClipboardWidget = React.lazy(() =>
-  import('../widgets/ClipboardWidget').then((m) => ({ default: m.ClipboardWidget }))
-)
-const MediaWidget = React.lazy(() =>
-  import('../widgets/MediaWidget').then((m) => ({ default: m.MediaWidget }))
-)
-const WallpaperWidget = React.lazy(() =>
-  import('../widgets/WallpaperWidget').then((m) => ({ default: m.WallpaperWidget }))
-)
+// Lazy-load Hitodama widgets for fluid performance
+const ControlsWidget = React.lazy(() => import('../widgets/ControlsWidget'))
+const TodayWidget = React.lazy(() => import('../widgets/TodayWidget'))
+const StatsWidget = React.lazy(() => import('../widgets/StatsWidget'))
+const ClipboardWidget = React.lazy(() => import('../widgets/ClipboardWidget'))
+const AppsWidget = React.lazy(() => import('../widgets/AppsWidget'))
+const WallpaperWidget = React.lazy(() => import('../widgets/WallpaperWidget'))
+const PowerWidget = React.lazy(() => import('../widgets/PowerWidget'))
 const SettingsWidget = React.lazy(() =>
   import('../settings/SettingsWidget').then((m) => ({ default: m.SettingsWidget }))
 )
+const MiniMusicIsland = React.lazy(() => import('./MiniMusicIsland'))
 
 import { useIslandStore } from '../../store/useIslandStore'
-import { IslandMode, WINDOW_CONFIG, BatteryState, animationProfiler } from '../../shared'
+import {
+  IslandMode,
+  WINDOW_CONFIG,
+  BatteryState,
+  animationProfiler,
+  HITODAMA_TAB_DIMENSIONS,
+  HITODAMA_EASING
+} from '../../shared'
 import { ChargingPhase } from '../../hooks/useChargingNotification'
 import { ChargingContent, PILL_SPRING } from './ChargingPill'
 import {
@@ -386,14 +380,17 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
 
   const greetingHeight = 42
 
+  const normalizedTab = normalizeTab(activeTab)
+  const tabDim = HITODAMA_TAB_DIMENSIONS[normalizedTab] ?? { width: 640, height: 390 }
+
   const targetWidth = isExpanded
-    ? WINDOW_CONFIG.panel.width
+    ? tabDim.width
     : isChargingExpanded
     ? 320
     : WINDOW_CONFIG.pill.width
 
   const targetHeight = isExpanded
-    ? WINDOW_CONFIG.panel.height
+    ? tabDim.height
     : isChargingExpanded || isGreetingActive
     ? greetingHeight
     : WINDOW_CONFIG.pill.height
@@ -425,8 +422,8 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     : isChargingActive || isGreetingTransition
     ? PILL_SPRING
     : {
-        duration: isExpanded ? 0.38 : 0.32,
-        ease: [0.22, 1, 0.36, 1]
+        duration: isExpanded ? 0.26 : 0.30,
+        ease: HITODAMA_EASING
       }
 
   return (
@@ -482,6 +479,13 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         }
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
+        onWheel={(e) => {
+          if (mode === 'collapsed' && e.deltaY > 0) {
+            e.preventDefault()
+            setActiveTab('controls')
+            onExpand()
+          }
+        }}
         initial={isEntering ? { y: -50, opacity: 0 } : false}
         animate={{
           left: integerLeft,
@@ -682,17 +686,20 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
               transition: { duration: 0.12, ease: 'easeOut' }
             }}
             style={{
-              width: `${WINDOW_CONFIG.panel.width}px`,
-              height: `${WINDOW_CONFIG.panel.height}px`,
+              width: '100%',
+              height: '100%',
               display: 'flex',
               flexDirection: 'column',
               boxSizing: 'border-box',
               overflow: 'hidden'
             }}
           >
-            <IslandHeader onCollapse={onCollapse} />
-
-            <NavigationTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
+            {normalizedTab !== 'music' && (
+              <>
+                <IslandHeader onCollapse={onCollapse} />
+                <NavigationTabBar activeTab={activeTab} setActiveTab={setActiveTab} panelWidth={targetWidth} />
+              </>
+            )}
 
             <div
               className="island-content-area"
@@ -700,7 +707,9 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
                 flex: 1,
                 overflowY: 'auto',
                 overflowX: 'hidden',
-                padding: '12px 16px 16px 16px'
+                padding: normalizedTab === 'wallpaper' ? '8px 12px' : '10px 16px 14px 16px',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
               <React.Suspense
@@ -719,19 +728,15 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
                   </div>
                 }
               >
-                {activeTab === 'launcher' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <CommandSearch onExecuteAction={handleExecuteAction} />
-                    <ShortcutGrid onLaunch={handleExecuteAction} />
-                  </div>
-                )}
-
-                {activeTab === 'calendar' && <CalendarWidget />}
-                {activeTab === 'system' && <SystemWidget />}
-                {activeTab === 'clipboard' && <ClipboardWidget />}
-                {activeTab === 'media' && <MediaWidget />}
-                {activeTab === 'routines' && <WallpaperWidget />}
-                {activeTab === 'settings' && <SettingsWidget />}
+                {(normalizedTab === 'controls' || activeTab === 'media') && <ControlsWidget />}
+                {(normalizedTab === 'today' || activeTab === 'calendar') && <TodayWidget />}
+                {(normalizedTab === 'stats' || activeTab === 'system') && <StatsWidget />}
+                {normalizedTab === 'clipboard' && <ClipboardWidget />}
+                {(normalizedTab === 'apps' || activeTab === 'launcher') && <AppsWidget />}
+                {(normalizedTab === 'wallpaper' || activeTab === 'routines') && <WallpaperWidget />}
+                {normalizedTab === 'power' && <PowerWidget />}
+                {normalizedTab === 'settings' && <SettingsWidget />}
+                {normalizedTab === 'music' && <MiniMusicIsland />}
               </React.Suspense>
             </div>
           </motion.div>

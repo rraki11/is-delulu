@@ -1,26 +1,59 @@
-import { AppShortcut, CommandItem, DesktopRoutine } from './types'
+import { AppShortcut, CommandItem, DesktopRoutine, ExpandedTab } from './types'
 
 export const WINDOW_CONFIG = {
-  width: 660,
-  height: 520,
+  width: 1080,
+  height: 700,
   collapsed: {
-    width: 660,
-    height: 520
+    width: 1080,
+    height: 700
   },
   expanded: {
-    width: 660,
-    height: 520
+    width: 1080,
+    height: 700
   },
   pill: {
     width: 190,
     height: 33
   },
   panel: {
-    width: 620,
-    height: 490
+    width: 640,
+    height: 390
   },
   topOffset: 0
 } as const
+
+// Hitodama adaptive morphology dimensions per active tab (z)
+export const HITODAMA_TAB_DIMENSIONS: Record<ExpandedTab, { width: number; height: number }> = {
+  controls: { width: 640, height: 390 },
+  today: { width: 880, height: 442 },
+  stats: { width: 880, height: 338 },
+  clipboard: { width: 880, height: 446 },
+  apps: { width: 720, height: 638 },
+  wallpaper: { width: 1040, height: 314 },
+  power: { width: 640, height: 166 },
+  music: { width: 380, height: 150 },
+  settings: { width: 640, height: 440 },
+  // Backward compatibility mappings for older tabs
+  launcher: { width: 720, height: 638 },
+  calendar: { width: 880, height: 442 },
+  system: { width: 880, height: 338 },
+  media: { width: 640, height: 390 },
+  routines: { width: 1040, height: 314 }
+}
+
+// Hitodama 7 navigation tab widths (O)
+export const HITODAMA_TAB_WIDTHS = {
+  Controls: 83,
+  Today: 64,
+  Stats: 60,
+  Clipboard: 90,
+  Apps: 58,
+  Wallpaper: 94,
+  Power: 67
+} as const
+
+// Hitodama cubic bezier easing curve (V)
+export const HITODAMA_EASING = [0.33, 1, 0.68, 1] as const
 
 export const DEFAULT_SHORTCUTS: AppShortcut[] = [
   {

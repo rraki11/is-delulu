@@ -39,6 +39,7 @@ import {
   onMediaChange
 } from './services/media'
 import { getRoutines, toggleRoutine } from './services/routines'
+import { executePowerAction, openQuickSetting } from './services/power'
 import {
   initPreferences,
   getPreferences,
@@ -477,6 +478,24 @@ if (!gotTheLock) {
       return controlMedia(action, value, sessionId, processId)
     }
   )
+
+  // Quick Controls & Power Actions
+  ipcMain.handle('power:execute', async (_event, action) => {
+    return executePowerAction(action)
+  })
+
+  ipcMain.handle('quicksettings:open', async (_event, target) => {
+    return openQuickSetting(target)
+  })
+
+  ipcMain.handle('audio:set-master-volume', async (_event, volume: number) => {
+    await controlMedia('volume', volume)
+    return true
+  })
+
+  ipcMain.handle('system:get-extended-stats', () => {
+    return getSystemStats()
+  })
 
   // Battery IPC handlers
   ipcMain.handle('battery:get-state', () => {

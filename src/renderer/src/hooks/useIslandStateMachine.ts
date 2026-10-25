@@ -382,9 +382,10 @@ export function useIslandStateMachine({
     }
   }, [clearHoverTimers, transitionTo, startMinVisibilityTimer])
 
-  // Pointer events on the island surface
+  // Pointer events on the island surface (strictly idempotent to prevent high-frequency timer thrashing)
   const handlePointerEnter = useCallback(() => {
     if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
+    if (isHoveredRef.current && stateRef.current !== 'HIDDEN' && stateRef.current !== 'NORMAL_REVEALING') return
     isHoveredRef.current = true
     clearHoverTimers()
 
@@ -398,6 +399,7 @@ export function useIslandStateMachine({
   }, [clearHoverTimers, reveal, transitionTo])
 
   const handlePointerLeave = useCallback(() => {
+    if (!isHoveredRef.current) return
     isHoveredRef.current = false
     if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
     if (isPinnedRef.current || stateRef.current === 'PINNED') return

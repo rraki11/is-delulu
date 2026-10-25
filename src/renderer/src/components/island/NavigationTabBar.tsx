@@ -1,180 +1,143 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react'
+import React, { useRef, useEffect, useCallback } from 'react'
 import { motion } from 'motion/react'
-import {
-  Search,
-  Calendar,
-  Cpu,
-  ClipboardList,
-  Music,
-  Wallpaper,
-  Settings
-} from 'lucide-react'
-import { ExpandedTab } from '../../shared'
+import { ExpandedTab, HITODAMA_EASING } from '../../shared'
 
-export const TABS: { id: ExpandedTab; label: string; icon: React.ElementType }[] = [
-  { id: 'launcher',  label: 'Launcher',  icon: Search },
-  { id: 'calendar',  label: 'Calendar',  icon: Calendar },
-  { id: 'system',    label: 'System',    icon: Cpu },
-  { id: 'clipboard', label: 'Clipboard', icon: ClipboardList },
-  { id: 'media',     label: 'Media',     icon: Music },
-  { id: 'routines',  label: 'Wallpapers', icon: Wallpaper },
-  { id: 'settings',  label: 'Settings',  icon: Settings }
+export interface HitodamaTabDef {
+  id: ExpandedTab
+  label: string
+  width: number
+}
+
+export const HITODAMA_TABS: HitodamaTabDef[] = [
+  { id: 'controls',  label: 'Controls',  width: 83 },
+  { id: 'today',     label: 'Today',     width: 64 },
+  { id: 'stats',     label: 'Stats',     width: 60 },
+  { id: 'clipboard', label: 'Clipboard', width: 90 },
+  { id: 'apps',      label: 'Apps',      width: 58 },
+  { id: 'wallpaper', label: 'Wallpaper', width: 94 },
+  { id: 'power',     label: 'Power',     width: 67 }
 ]
+
+// Normalize legacy tab IDs to Hitodama tab IDs
+export function normalizeTab(tab: ExpandedTab): ExpandedTab {
+  switch (tab) {
+    case 'launcher':
+      return 'apps'
+    case 'calendar':
+      return 'today'
+    case 'system':
+      return 'stats'
+    case 'media':
+      return 'controls'
+    case 'routines':
+      return 'wallpaper'
+    default:
+      return tab
+  }
+}
 
 interface NavigationTabBarProps {
   activeTab: ExpandedTab
   setActiveTab: (tab: ExpandedTab) => void
+  panelWidth?: number
 }
 
 export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
   activeTab,
-  setActiveTab
+  setActiveTab,
+  panelWidth = 640
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft,  setCanScrollLeft]  = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
+  const normalizedActive = normalizeTab(activeTab)
 
-  // ── Scroll status ──────────────────────────────────────────────────
-  const updateScrollStatus = useCallback(() => {
-    const el = containerRef.current
-    if (!el) return
-    const maxScroll = el.scrollWidth - el.clientWidth
-    setCanScrollLeft(el.scrollLeft > 2)
-    setCanScrollRight(maxScroll > 2 && el.scrollLeft < maxScroll - 2)
-  }, [])
-
-  // ── Scroll active tab into view ────────────────────────────────────
-  const scrollTabIntoView = useCallback((tabId: ExpandedTab, smooth = true) => {
-    const el = containerRef.current
-    if (!el) return
-    const activeBtn = el.querySelector(`button[data-tab="${tabId}"]`) as HTMLElement | null
-    if (!activeBtn) return
-
-    const MARGIN = 8
-    const targetLeft  = activeBtn.offsetLeft - MARGIN
-    const targetRight = activeBtn.offsetLeft + activeBtn.offsetWidth + MARGIN
-
-    const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const isVisible = !document.hidden
-    const behavior: ScrollBehavior = smooth && isVisible && !isReducedMotion ? 'smooth' : 'auto'
-
-    if (targetLeft < el.scrollLeft) {
-      const dest = Math.max(0, targetLeft)
-      try {
-        el.scrollTo({ left: dest, behavior })
-        setTimeout(() => {
-          if (el && Math.abs(el.scrollLeft - dest) > 2) { el.scrollLeft = dest; updateScrollStatus() }
-        }, 350)
-      } catch { el.scrollLeft = dest }
-    } else if (targetRight > el.scrollLeft + el.clientWidth) {
-      const dest = Math.min(el.scrollWidth - el.clientWidth, targetRight - el.clientWidth)
-      try {
-        el.scrollTo({ left: dest, behavior })
-        setTimeout(() => {
-          if (el && Math.abs(el.scrollLeft - dest) > 2) { el.scrollLeft = dest; updateScrollStatus() }
-        }, 350)
-      } catch { el.scrollLeft = dest }
-    }
-    updateScrollStatus()
-  }, [updateScrollStatus])
-
-  useEffect(() => {
-    scrollTabIntoView(activeTab, true)
-    updateScrollStatus()
-  }, [activeTab, scrollTabIntoView, updateScrollStatus])
-
-  // ── Trackpad / wheel horizontal scroll ────────────────────────────
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const handleWheel = (e: WheelEvent): void => {
-      if (el.scrollWidth <= el.clientWidth) return
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && e.deltaY !== 0) {
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, index: number) => {
+      if (e.key === 'ArrowRight') {
         e.preventDefault()
-        el.scrollLeft += e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY
-        updateScrollStatus()
-      } else if (Math.abs(e.deltaX) > 0) {
-        requestAnimationFrame(updateScrollStatus)
+        const nextIndex = (index + 1) % HITODAMA_TABS.length
+        setActiveTab(HITODAMA_TABS[nextIndex].id)
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        const prevIndex = (index - 1 + HITODAMA_TABS.length) % HITODAMA_TABS.length
+        setActiveTab(HITODAMA_TABS[prevIndex].id)
       }
-    }
-    el.addEventListener('wheel', handleWheel, { passive: false })
-    el.addEventListener('scroll', updateScrollStatus, { passive: true })
-    window.addEventListener('resize', updateScrollStatus)
-    updateScrollStatus()
-    return () => {
-      el.removeEventListener('wheel', handleWheel)
-      el.removeEventListener('scroll', updateScrollStatus)
-      window.removeEventListener('resize', updateScrollStatus)
-    }
-  }, [updateScrollStatus])
+    },
+    [setActiveTab]
+  )
 
-  // ── Keyboard navigation ────────────────────────────────────────────
-  const handleKeyDown = (e: React.KeyboardEvent): void => {
-    const cur = TABS.findIndex((t) => t.id === activeTab)
-    if (cur === -1) return
-    const jump = (idx: number): void => {
-      const tab = TABS[idx].id
-      setActiveTab(tab);
-      (containerRef.current?.querySelector(`button[data-tab="${tab}"]`) as HTMLElement | null)?.focus()
-    }
-    if      (e.key === 'ArrowRight') { e.preventDefault(); jump((cur + 1) % TABS.length) }
-    else if (e.key === 'ArrowLeft')  { e.preventDefault(); jump((cur - 1 + TABS.length) % TABS.length) }
-    else if (e.key === 'Home')       { e.preventDefault(); jump(0) }
-    else if (e.key === 'End')        { e.preventDefault(); jump(TABS.length - 1) }
-  }
+  // Hitodama centered formula: left = 18 + (panelWidth - 36 - totalTabWidth) / 2
+  // Total tabs width = sum(width) + 6px * (length - 1) = 516 + 36 = 552px
+  const totalTabsWidth = HITODAMA_TABS.reduce((acc, t) => acc + t.width, 0) + 6 * (HITODAMA_TABS.length - 1)
 
   return (
-    <div className="nav-seg-wrap">
-      {/* Left scroll fade */}
-      {canScrollLeft  && <div data-testid="nav-fade-left"  className="nav-seg-fade nav-seg-fade--left"  />}
-      {/* Right scroll fade */}
-      {canScrollRight && <div data-testid="nav-fade-right" className="nav-seg-fade nav-seg-fade--right" />}
-
-      {/* Recessed outer track */}
+    <div
+      ref={containerRef}
+      role="tablist"
+      aria-label="Hitodama Navigation Tabs"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px',
+        width: '100%',
+        padding: '12px 0 8px 0',
+        boxSizing: 'border-box',
+        userSelect: 'none',
+        position: 'relative',
+        zIndex: 10
+      }}
+    >
       <div
-        ref={containerRef}
-        data-testid="tab-bar"
-        role="tablist"
-        aria-label="Island Navigation Tabs"
-        onKeyDown={handleKeyDown}
-        className="nav-seg-track nav-tab-bar no-drag"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          maxWidth: `${totalTabsWidth}px`
+        }}
       >
-        {TABS.map((tab) => {
-          const Icon     = tab.icon
-          const isActive = activeTab === tab.id
-
+        {HITODAMA_TABS.map((tab, idx) => {
+          const isActive = normalizedActive === tab.id
           return (
-            <button
+            <motion.button
               key={tab.id}
-              data-tab={tab.id}
               role="tab"
               aria-selected={isActive}
-              aria-label={tab.label}
-              title={tab.label}
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
-              className={`nav-seg-item nav-tab-button${isActive ? ' nav-seg-item--active' : ''}`}
+              onKeyDown={(e) => handleKeyDown(e, idx)}
+              style={{
+                width: `${tab.width}px`,
+                height: '30px',
+                borderRadius: '9999px',
+                border: 'none',
+                outline: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: isActive ? 600 : 500,
+                letterSpacing: '-0.01em',
+                position: 'relative',
+                background: isActive ? 'var(--hitodama-accent, #D7B56D)' : 'transparent',
+                color: isActive ? '#141310' : '#8E919A',
+                boxShadow: isActive ? '0 2px 8px rgba(0, 0, 0, 0.28)' : 'none',
+                transition: 'color 180ms ease, background-color 180ms ease'
+              }}
+              whileHover={{
+                color: isActive ? '#141310' : '#F4F5F7',
+                backgroundColor: isActive
+                  ? 'var(--hitodama-accent, #D7B56D)'
+                  : 'rgba(255, 255, 255, 0.06)'
+              }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ duration: 0.18, ease: HITODAMA_EASING }}
             >
-              {/* Sliding raised pill */}
-              {isActive && (
-                <motion.span
-                  layoutId="nav-active-pill"
-                  className="nav-seg-pill"
-                  transition={{ type: 'spring', stiffness: 400, damping: 32, mass: 0.65 }}
-                  aria-hidden="true"
-                />
-              )}
-
-              {/* Icon — sits above pill via z-index */}
-              <span className="nav-seg-content" aria-hidden="true">
-                <Icon size={15} strokeWidth={isActive ? 2 : 1.6} className="nav-seg-icon" />
-              </span>
-            </button>
+              {tab.label}
+            </motion.button>
           )
         })}
       </div>
     </div>
   )
 }
-
-export default NavigationTabBar

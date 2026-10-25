@@ -13,7 +13,9 @@ import {
   AccentPalette,
   BatteryState,
   WallpaperItem,
-  AnimationMetrics
+  AnimationMetrics,
+  PowerAction,
+  QuickSettingTarget
 } from '../shared/types'
 
 const isDeluluAPI: IsDeluluAPI = {
@@ -74,6 +76,9 @@ const isDeluluAPI: IsDeluluAPI = {
   getSystemStats: (): Promise<SystemStats> => {
     return ipcRenderer.invoke('system:get-stats')
   },
+  getExtendedStats: (): Promise<SystemStats> => {
+    return ipcRenderer.invoke('system:get-extended-stats')
+  },
   onSystemStatsUpdate: (callback: (stats: SystemStats) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, stats: SystemStats): void => {
       callback(stats)
@@ -82,6 +87,17 @@ const isDeluluAPI: IsDeluluAPI = {
     return () => {
       ipcRenderer.removeListener('system:update', handler)
     }
+  },
+
+  // Quick Controls & Power Actions
+  executePowerAction: (action: PowerAction): Promise<ActionResult> => {
+    return ipcRenderer.invoke('power:execute', action)
+  },
+  openQuickSetting: (target: QuickSettingTarget): Promise<ActionResult> => {
+    return ipcRenderer.invoke('quicksettings:open', target)
+  },
+  setMasterVolume: (volume: number): Promise<boolean> => {
+    return ipcRenderer.invoke('audio:set-master-volume', volume)
   },
 
   // Clipboard operations
