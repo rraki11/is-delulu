@@ -565,6 +565,22 @@ html, body {
   outline-offset: 1px !important;
 }
 
+/* Master Volume Slider */
+.volume-slider {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.volume-slider:hover {
+  box-shadow: 0 0 14px -2px var(--wallpaper-accent-glow, rgba(215, 181, 109, 0.16));
+}
+
+.volume-slider:focus-visible {
+  outline: 2px solid var(--accent, #D7B56D) !important;
+  outline-offset: 1px !important;
+}
+
 /* Pulse animation */
 @keyframes pulseGlow {
   0%, 100% { opacity: 0.6; transform: scale(1);   }

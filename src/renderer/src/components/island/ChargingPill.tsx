@@ -299,7 +299,6 @@ export const ChargingPill: React.FC<ChargingPillProps> = ({
           <motion.div
             className="charging-pill-surface"
             onClick={onClick}
-            title={onClick ? 'Click to open dashboard' : undefined}
             animate={{
               width: targetW,
               height: targetH,

@@ -44,19 +44,18 @@ export const IslandPill: React.FC<IslandPillProps> = ({ onExpand }) => {
       exit={{ y: -34, opacity: 0, scale: 1 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-      title="Click to expand"
       style={{
         position: 'absolute',
         top: 0,
         transformOrigin: 'top center',
         originX: 0.5,
         originY: 0,
-        width: '190px',
-        height: '33px',
-        backgroundColor: 'var(--bg-pill)',
+        width: '204px',
+        height: '32px',
+        backgroundColor: '#000000',
         border: 'none',
-        borderRadius: 'var(--radius-pill)',
-        boxShadow: 'var(--shadow-pill)',
+        borderRadius: '0 0 12px 12px',
+        boxShadow: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

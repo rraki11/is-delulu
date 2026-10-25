@@ -142,10 +142,14 @@ export function createMainWindow(): BrowserWindow {
 
   console.log('[is-delulu:display] Primary Display WorkArea:', cachedPrimaryWorkArea)
 
+  if (cachedPrimaryBounds.width === 0) {
+    updateCachedDisplayMetrics()
+  }
+
   const initialWidth = WINDOW_CONFIG.width
   const initialHeight = WINDOW_CONFIG.height
-  const initialX = Math.round(workX + (workW - initialWidth) / 2)
-  const initialY = workY + WINDOW_CONFIG.topOffset
+  const initialX = Math.round(cachedPrimaryBounds.x + (cachedPrimaryBounds.width - initialWidth) / 2)
+  const initialY = cachedPrimaryBounds.y + WINDOW_CONFIG.topOffset
 
   console.log('[is-delulu:window] Initial window bounds:', {
     x: initialX,
@@ -267,16 +271,14 @@ export function createMainWindow(): BrowserWindow {
 export function enforceCenteredPosition(_mode: IslandMode = currentMode): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
 
-  if (cachedPrimaryWorkArea.width === 0) {
+  if (cachedPrimaryBounds.width === 0) {
     updateCachedDisplayMetrics()
   }
 
-  const { x: workX, y: workY, width: workW } = cachedPrimaryWorkArea
-
   const targetWidth = WINDOW_CONFIG.width
   const targetHeight = WINDOW_CONFIG.height
-  const targetX = Math.round(workX + (workW - targetWidth) / 2)
-  const targetY = workY + WINDOW_CONFIG.topOffset
+  const targetX = Math.round(cachedPrimaryBounds.x + (cachedPrimaryBounds.width - targetWidth) / 2)
+  const targetY = cachedPrimaryBounds.y + WINDOW_CONFIG.topOffset
 
   const currentBounds = mainWindow.getBounds()
   if (
@@ -553,8 +555,8 @@ export function startActivationMonitor(): void {
       surfaceTop = winBounds.y + liveSurfaceRect.y
       surfaceBottom = surfaceTop + liveSurfaceRect.height
     } else {
-      const surfaceWidth = currentMode === 'expanded' ? 640 : WINDOW_CONFIG.pill.width
-      const surfaceHeight = currentMode === 'expanded' ? 390 : WINDOW_CONFIG.pill.height
+      const surfaceWidth = currentMode === 'expanded' ? WINDOW_CONFIG.panel.width : WINDOW_CONFIG.pill.width
+      const surfaceHeight = currentMode === 'expanded' ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height
       surfaceLeft = centerX - surfaceWidth / 2
       surfaceRight = centerX + surfaceWidth / 2
       surfaceTop = winBounds.y

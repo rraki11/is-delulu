@@ -130,7 +130,7 @@ export const LowBatteryPill: React.FC<LowBatteryPillProps> = ({
               height: COMPACT_H,
               borderRadius: '0 0 17px 17px',
               backgroundColor: '#000000',
-              border: '1px solid rgba(239, 68, 68, 0.18)',
+              border: 'none',
               borderTop: 'none',
               overflow: 'hidden',
               display: 'flex',

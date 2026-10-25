@@ -106,7 +106,7 @@ export const EnergySaverPill: React.FC<EnergySaverPillProps> = ({
               height: COMPACT_H,
               borderRadius: '0 0 17px 17px',
               backgroundColor: '#000000',
-              border: isOn ? '1px solid rgba(16, 185, 129, 0.22)' : '1px solid rgba(156, 163, 175, 0.18)',
+              border: 'none',
               borderTop: 'none',
               overflow: 'hidden',
               display: 'flex',

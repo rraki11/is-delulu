@@ -29,7 +29,9 @@ export class AudioSessionService {
 
   public applyOptimisticMasterVolume(volume: number): void {
     this.masterVolume = Math.max(0, Math.min(100, Math.round(volume)))
-    this.masterMuted = this.masterVolume === 0
+    if (this.masterVolume === 0) {
+      this.masterMuted = true
+    }
   }
 
   public applyOptimisticMasterMute(mute?: boolean): void {

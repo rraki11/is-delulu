@@ -12,19 +12,19 @@ export const WINDOW_CONFIG = {
     height: 700
   },
   pill: {
-    width: 190,
-    height: 33
+    width: 204,
+    height: 32
   },
   panel: {
-    width: 640,
-    height: 390
+    width: 768,
+    height: 468
   },
   topOffset: 0
 } as const
 
 // Hitodama adaptive morphology dimensions per active tab (z)
 export const HITODAMA_TAB_DIMENSIONS: Record<ExpandedTab, { width: number; height: number }> = {
-  controls: { width: 640, height: 390 },
+  controls: { width: 768, height: 468 },
   today: { width: 880, height: 442 },
   stats: { width: 880, height: 350 },
   clipboard: { width: 880, height: 446 },
@@ -37,7 +37,7 @@ export const HITODAMA_TAB_DIMENSIONS: Record<ExpandedTab, { width: number; heigh
   launcher: { width: 720, height: 638 },
   calendar: { width: 880, height: 442 },
   system: { width: 880, height: 350 },
-  media: { width: 640, height: 390 },
+  media: { width: 768, height: 468 },
   routines: { width: 1040, height: 404 }
 }
 

@@ -381,7 +381,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const greetingHeight = 42
 
   const normalizedTab = normalizeTab(activeTab)
-  const tabDim = HITODAMA_TAB_DIMENSIONS[normalizedTab] ?? { width: 640, height: 390 }
+  const tabDim = HITODAMA_TAB_DIMENSIONS[normalizedTab] ?? { width: 768, height: 468 }
 
   const targetWidth = isExpanded
     ? tabDim.width
@@ -396,10 +396,10 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     : WINDOW_CONFIG.pill.height
 
   const targetBorderRadius = isExpanded
-    ? '0px 0px 22px 22px'
+    ? '0px 0px 24px 24px'
     : targetHeight >= 42
-    ? '0px 0px 21px 21px'
-    : '0px 0px 17px 17px'
+    ? '0px 0px 20px 20px'
+    : '0px 0px 12px 12px'
 
   const integerLeft = Math.floor((windowWidth - targetWidth) / 2)
 
@@ -460,6 +460,55 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
         }}
       />
 
+      {/* Top-Edge MacBook Notch Ears (Concave Fillets) */}
+      <motion.svg
+        key={`notch-ear-left-${welcomeKey}`}
+        aria-hidden="true"
+        width="11"
+        height="11"
+        viewBox="0 0 11 11"
+        initial={isEntering ? { y: -50, opacity: 0 } : false}
+        animate={{
+          left: integerLeft - 10,
+          y: islandY,
+          opacity: isHidden || isExpanded || isChargingExiting ? 0 : 1
+        }}
+        transition={islandTransition}
+        style={{
+          position: 'absolute',
+          top: 0,
+          pointerEvents: 'none',
+          zIndex: 101,
+          visibility: isHidden || isExpanded ? 'hidden' : 'visible'
+        }}
+      >
+        <path d="M 0 0 A 11 11 0 0 1 11 11 L 11 0 Z" fill="#000000" />
+      </motion.svg>
+
+      <motion.svg
+        key={`notch-ear-right-${welcomeKey}`}
+        aria-hidden="true"
+        width="11"
+        height="11"
+        viewBox="0 0 11 11"
+        initial={isEntering ? { y: -50, opacity: 0 } : false}
+        animate={{
+          left: integerLeft + targetWidth - 1,
+          y: islandY,
+          opacity: isHidden || isExpanded || isChargingExiting ? 0 : 1
+        }}
+        transition={islandTransition}
+        style={{
+          position: 'absolute',
+          top: 0,
+          pointerEvents: 'none',
+          zIndex: 101,
+          visibility: isHidden || isExpanded ? 'hidden' : 'visible'
+        }}
+      >
+        <path d="M 0 0 L 0 11 A 11 11 0 0 1 11 0 Z" fill="#000000" />
+      </motion.svg>
+
       <motion.div
         key={`island-surface-${welcomeKey}`}
         id="island-surface"
@@ -492,7 +541,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           width: targetWidth,
           height: targetHeight,
           borderRadius: targetBorderRadius,
-          backgroundColor: isExpanded ? 'var(--bg-panel)' : 'var(--bg-pill)',
+          backgroundColor: isExpanded ? 'var(--bg-panel)' : '#000000',
           y: islandY,
           opacity: islandOpacity
         }}
@@ -526,13 +575,12 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
             window.isDelulu.setIslandMode('hidden')
           }
         }}
-        title={mode === 'collapsed' ? 'Click to expand' : undefined}
         style={{
           position: 'absolute',
           top: 0,
           transformOrigin: 'top center',
           originX: 0.5,
-          border: isExpanded ? '1px solid var(--border-panel)' : 'none',
+          border: 'none',
           borderTop: 'none',
           backdropFilter: isExpanded ? 'blur(36px) saturate(180%)' : 'none',
           WebkitBackdropFilter: isExpanded ? 'blur(36px) saturate(180%)' : 'none',
@@ -546,21 +594,19 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           outline: 'none',
           pointerEvents: isHidden ? 'none' : 'auto',
           zIndex: 100,
-          boxShadow: isHidden
-            ? 'none'
-            : isExpanded
-            ? 'var(--shadow-panel)'
-            : 'var(--shadow-pill)',
-          transition: 'box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1), border-color 380ms ease'
+          boxShadow: isHidden || !isExpanded ? 'none' : 'var(--shadow-panel)',
+          transition: 'box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1)'
         }}
       >
-        {/* Wallpaper-adaptive animated gradient â€” three color orbs drift independently */}
+        {/* Wallpaper-adaptive animated gradient — three color orbs drift independently */}
         <div
           className={`island-gradient-stage${isExpanded ? ' expanded' : ''}`}
           aria-hidden="true"
           style={{
-            visibility: isHidden ? 'hidden' : 'visible',
-            animationPlayState: isHidden ? 'paused' : 'running'
+            visibility: isHidden || !isExpanded ? 'hidden' : 'visible',
+            opacity: isExpanded ? 1 : 0,
+            animationPlayState: isHidden || !isExpanded ? 'paused' : 'running',
+            transition: 'opacity 0.25s ease'
           }}
         >
           <div className="island-grad-orb island-grad-orb--primary" />

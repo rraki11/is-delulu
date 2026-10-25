@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'motion/react'
 import {
   Wifi,
   Bluetooth,
   Volume2,
+  VolumeX,
   Moon,
   Sun,
   ChevronRight,
@@ -29,9 +30,222 @@ export const ControlsWidget: React.FC = () => {
     ? mediaState.artist
     : 'lofi radio'
 
-  const volume = mediaState?.volume ?? 75
+  const serverVolume = mediaState?.volume ?? 75
+  const isMuted = (mediaState?.isMuted ?? false) || serverVolume === 0
   const durationSec = mediaState?.durationSec ?? 3735
   const positionSec = mediaState?.positionSec ?? 57
+
+  // Local optimistic volume for zero-latency slider updates during wheel/drag
+  const [localVolume, setLocalVolume] = useState<number>(serverVolume)
+  const [isDragging, setIsDragging] = useState<boolean>(false)
+
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const localVolumeRef = useRef<number>(serverVolume)
+  const lastInteractionTimeRef = useRef<number>(0)
+  const pendingVolumeRef = useRef<number | null>(null)
+  const lastSentVolumeRef = useRef<number>(serverVolume)
+  const isDispatchingRef = useRef<boolean>(false)
+  const dispatchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const wheelAccumulatorRef = useRef<number>(0)
+  const lastWheelTimeRef = useRef<number>(0)
+
+  // Keep synchronous ref aligned with localVolume state
+  localVolumeRef.current = localVolume
+
+  // Synchronize with external Windows volume changes when idle
+  useEffect(() => {
+    const timeSinceInteraction = Date.now() - lastInteractionTimeRef.current
+    if (!isDragging && timeSinceInteraction > 350) {
+      setLocalVolume(serverVolume)
+      localVolumeRef.current = serverVolume
+      lastSentVolumeRef.current = serverVolume
+    }
+  }, [serverVolume, isDragging])
+
+  // Serialized, throttled IPC dispatcher avoiding race conditions on rapid wheel/drag input
+  const scheduleVolumeDispatch = useCallback(() => {
+    if (dispatchTimerRef.current) return
+
+    dispatchTimerRef.current = setTimeout(async () => {
+      dispatchTimerRef.current = null
+      if (pendingVolumeRef.current === null) return
+      const target = pendingVolumeRef.current
+
+      if (target === lastSentVolumeRef.current) {
+        pendingVolumeRef.current = null
+        return
+      }
+
+      isDispatchingRef.current = true
+      try {
+        if (window.isDelulu?.setMasterVolume) {
+          await window.isDelulu.setMasterVolume(target)
+        } else if (window.isDelulu?.controlMedia) {
+          await window.isDelulu.controlMedia('volume', target)
+        }
+        lastSentVolumeRef.current = target
+      } catch (err) {
+        console.error('[ControlsWidget] Failed to set master volume:', err)
+      } finally {
+        isDispatchingRef.current = false
+        if (pendingVolumeRef.current !== null && pendingVolumeRef.current !== lastSentVolumeRef.current) {
+          scheduleVolumeDispatch()
+        } else {
+          pendingVolumeRef.current = null
+        }
+      }
+    }, 30) // 30ms throttling window ensures smooth rapid wheel input without saturating IPC
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (dispatchTimerRef.current) {
+        clearTimeout(dispatchTimerRef.current)
+      }
+    }
+  }, [])
+
+  const applyVolume = useCallback(
+    (action: number | ((prev: number) => number)) => {
+      const next = typeof action === 'function' ? action(localVolumeRef.current) : action
+      const clamped = Math.max(0, Math.min(100, Math.round(next)))
+      lastInteractionTimeRef.current = Date.now()
+      setLocalVolume(clamped)
+      localVolumeRef.current = clamped
+      pendingVolumeRef.current = clamped
+      scheduleVolumeDispatch()
+    },
+    [scheduleVolumeDispatch]
+  )
+
+  // Shared wheel step computation for discrete wheel notches and smooth trackpad gestures
+  const handleWheelLogic = useCallback(
+    (deltaY: number) => {
+      const now = Date.now()
+      if (now - lastWheelTimeRef.current > 200) {
+        wheelAccumulatorRef.current = 0
+      }
+      lastWheelTimeRef.current = now
+
+      const WHEEL_STEP = 2 // 2 percentage points per wheel step
+
+      let steps = 0
+      if (Math.abs(deltaY) >= 40) {
+        // Discrete mouse-wheel tick or fast flick
+        steps = Math.max(1, Math.round(Math.abs(deltaY) / 100)) * Math.sign(-deltaY)
+      } else {
+        // Precision trackpad continuous gesture
+        wheelAccumulatorRef.current += -deltaY
+        const PIXELS_PER_STEP = 35
+        if (Math.abs(wheelAccumulatorRef.current) >= PIXELS_PER_STEP) {
+          steps = Math.trunc(wheelAccumulatorRef.current / PIXELS_PER_STEP)
+          wheelAccumulatorRef.current -= steps * PIXELS_PER_STEP
+        }
+      }
+
+      if (steps !== 0) {
+        const deltaPercent = steps * WHEEL_STEP
+        applyVolume((prev) => prev + deltaPercent)
+      }
+    },
+    [applyVolume]
+  )
+
+  // Native non-passive wheel event listener to guarantee cancellation of container scrolling
+  useEffect(() => {
+    const sliderEl = sliderRef.current
+    if (!sliderEl) return
+
+    const handleNativeWheel = (e: WheelEvent) => {
+      // Must preventDefault on native non-passive wheel event to stop browser scroll-chaining to ancestor containers
+      e.preventDefault()
+      e.stopPropagation()
+      if (typeof e.stopImmediatePropagation === 'function') {
+        e.stopImmediatePropagation()
+      }
+      handleWheelLogic(e.deltaY)
+    }
+
+    sliderEl.addEventListener('wheel', handleNativeWheel, { passive: false })
+    return () => {
+      sliderEl.removeEventListener('wheel', handleNativeWheel)
+    }
+  }, [handleWheelLogic])
+
+  // Mouse wheel and trackpad scroll handler (React synthetic event fallback)
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // Prevent scrolling parent containers or island auto-hide triggers
+    e.preventDefault()
+    e.stopPropagation()
+    handleWheelLogic(e.deltaY)
+  }
+
+  // Pointer drag and click-to-set handlers
+  const updateVolumeFromPointer = (clientX: number) => {
+    if (!sliderRef.current) return
+    const rect = sliderRef.current.getBoundingClientRect()
+    if (rect.width <= 0) return
+    const clickX = clientX - rect.left
+    const percent = Math.round((clickX / rect.width) * 100)
+    applyVolume(percent)
+  }
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return // Left click only
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setIsDragging(true)
+    updateVolumeFromPointer(e.clientX)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    e.preventDefault()
+    e.stopPropagation()
+    updateVolumeFromPointer(e.clientX)
+  }
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      setIsDragging(false)
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      } catch {}
+    }
+  }
+
+  // Keyboard accessibility
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    let delta = 0
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      delta = e.shiftKey ? 5 : 2
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      delta = e.shiftKey ? -5 : -2
+    } else if (e.key === 'Home') {
+      applyVolume(0)
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    } else if (e.key === 'End') {
+      applyVolume(100)
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    } else if (e.key === 'm' || e.key === 'M') {
+      if (window.isDelulu?.controlMedia) {
+        window.isDelulu.controlMedia('mute')
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    } else {
+      return
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    applyVolume(localVolume + delta)
+  }
 
   const formatTime = (sec: number): string => {
     const m = Math.floor(sec / 60)
@@ -98,10 +312,11 @@ export const ControlsWidget: React.FC = () => {
         flexDirection: 'column',
         gap: '12px',
         width: '100%',
-        maxWidth: '604px',
+        maxWidth: '724px',
         margin: '0 auto',
-        padding: '6px 0',
-        userSelect: 'none'
+        padding: '0',
+        userSelect: 'none',
+        boxSizing: 'border-box'
       }}
     >
       {/* â”€â”€ Row 1 Tiles: Wi-Fi, Bluetooth, Audio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -315,7 +530,22 @@ export const ControlsWidget: React.FC = () => {
 
       {/* â”€â”€ Row 3: Master Volume Slider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
-        onClick={handleVolumeChange}
+        ref={sliderRef}
+        role="slider"
+        tabIndex={0}
+        aria-label="Master volume"
+        aria-valuenow={Math.round(localVolume)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={`${Math.round(localVolume)}%${isMuted ? ' (Muted)' : ''}`}
+        className="volume-slider"
+        onWheel={handleWheel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onKeyDown={handleKeyDown}
+        title="Volume (Scroll, drag, or click to adjust)"
         style={{
           width: '100%',
           height: '42px',
@@ -324,8 +554,12 @@ export const ControlsWidget: React.FC = () => {
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
-          cursor: 'pointer',
-          overflow: 'hidden'
+          cursor: 'ew-resize',
+          overflow: 'hidden',
+          userSelect: 'none',
+          touchAction: 'none',
+          overscrollBehavior: 'contain',
+          outline: 'none'
         }}
       >
         <motion.div
@@ -334,12 +568,12 @@ export const ControlsWidget: React.FC = () => {
             left: 0,
             top: 0,
             bottom: 0,
-            width: `${Math.max(6, volume)}%`,
-            backgroundColor: 'var(--hitodama-accent, #D7B56D)',
+            width: `${Math.max(6, localVolume)}%`,
+            backgroundColor: isMuted ? 'rgba(255, 255, 255, 0.22)' : 'var(--hitodama-accent, #D7B56D)',
             borderRadius: '9999px',
             pointerEvents: 'none'
           }}
-          transition={{ duration: 0.12, ease: 'easeOut' }}
+          transition={{ duration: isDragging ? 0 : 0.08, ease: 'easeOut' }}
         />
         <div
           style={{
@@ -354,17 +588,21 @@ export const ControlsWidget: React.FC = () => {
             pointerEvents: 'none'
           }}
         >
-          <Volume2 size={16} strokeWidth={2.2} color={volume > 8 ? '#141310' : '#8E919A'} />
+          {isMuted ? (
+            <VolumeX size={16} strokeWidth={2.2} color={localVolume > 8 && !isMuted ? '#141310' : '#8E919A'} />
+          ) : (
+            <Volume2 size={16} strokeWidth={2.2} color={localVolume > 8 ? '#141310' : '#8E919A'} />
+          )}
           <span
             className="tabular-nums font-mono"
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: '12px',
               fontWeight: 600,
-              color: volume > 92 ? '#141310' : '#F4F5F7'
+              color: localVolume > 92 && !isMuted ? '#141310' : '#F4F5F7'
             }}
           >
-            {Math.round(volume)}%
+            {Math.round(localVolume)}%
           </span>
         </div>
       </div>
@@ -375,11 +613,11 @@ export const ControlsWidget: React.FC = () => {
           width: '100%',
           borderRadius: '16px',
           backgroundColor: '#151618',
-          padding: '16px',
+          padding: '14px 16px',
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px'
+          gap: '10px'
         }}
       >
         {/* Device Tag */}
@@ -429,7 +667,7 @@ export const ControlsWidget: React.FC = () => {
                   fontSize: '14px',
                   fontWeight: 600,
                   color: '#F4F5F7',
-                  maxWidth: '300px',
+                  maxWidth: '440px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'

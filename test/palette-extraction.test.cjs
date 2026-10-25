@@ -76,7 +76,7 @@ console.log('=== RUNNING WALLPAPER ACCENT ADAPTIVE EXTRACTION TEST SUITE ===');
 // Test 5: Power Tab Dimensions & Geometry Clearance
 {
   const HITODAMA_TAB_DIMENSIONS = {
-    controls: { width: 640, height: 390 },
+    controls: { width: 768, height: 468 },
     today: { width: 880, height: 442 },
     stats: { width: 880, height: 338 },
     clipboard: { width: 880, height: 446 },
