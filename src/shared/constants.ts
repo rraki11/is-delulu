@@ -26,19 +26,19 @@ export const WINDOW_CONFIG = {
 export const HITODAMA_TAB_DIMENSIONS: Record<ExpandedTab, { width: number; height: number }> = {
   controls: { width: 640, height: 390 },
   today: { width: 880, height: 442 },
-  stats: { width: 880, height: 338 },
+  stats: { width: 880, height: 350 },
   clipboard: { width: 880, height: 446 },
   apps: { width: 720, height: 638 },
-  wallpaper: { width: 1040, height: 314 },
-  power: { width: 640, height: 166 },
+  wallpaper: { width: 1040, height: 404 },
+  power: { width: 640, height: 236 },
   music: { width: 380, height: 150 },
   settings: { width: 640, height: 440 },
   // Backward compatibility mappings for older tabs
   launcher: { width: 720, height: 638 },
   calendar: { width: 880, height: 442 },
-  system: { width: 880, height: 338 },
+  system: { width: 880, height: 350 },
   media: { width: 640, height: 390 },
-  routines: { width: 1040, height: 314 }
+  routines: { width: 1040, height: 404 }
 }
 
 // Hitodama 7 navigation tab widths (O)

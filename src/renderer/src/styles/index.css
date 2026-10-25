@@ -316,10 +316,10 @@ html, body {
 }
 
 /* =====================================================================
- * Neumorphic Segmented Navigation — Icon Only
+ * Neumorphic Segmented Navigation â€” Icon Only
  * Recessed outer track + raised animated pill indicator.
  * Seven icons spread evenly via flex:1; no visible labels.
- * Colors 100% from design-token CSS vars — adapts to dark / light.
+ * Colors 100% from design-token CSS vars â€” adapts to dark / light.
  * ===================================================================== */
 
 /* Outer wrapper */
@@ -331,7 +331,7 @@ html, body {
   box-sizing: border-box;
 }
 
-/* Recessed track — fills full width, children spread evenly */
+/* Recessed track â€” fills full width, children spread evenly */
 .nav-seg-track {
   display: flex;
   align-items: center;
@@ -354,7 +354,7 @@ html, body {
   height: 0;
 }
 
-/* Each icon item — flex:1 so all seven fill the track evenly */
+/* Each icon item â€” flex:1 so all seven fill the track evenly */
 .nav-seg-item {
   position: relative;
   flex: 1;
@@ -461,13 +461,33 @@ html, body {
   outline-offset: 1px !important;
 }
 
+/* Hitodama Navigation Tab Bar */
+.hitodama-nav-tab-btn {
+  transition: background-color 180ms ease;
+}
+
+.hitodama-nav-tab-btn:hover:not(.active) {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #F4F5F7 !important;
+}
+
+[data-theme="light"] .hitodama-nav-tab-btn:hover:not(.active) {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: #111827 !important;
+}
+
+.hitodama-nav-tab-btn:focus-visible {
+  outline: 1.5px solid var(--accent, #D7B56D) !important;
+  outline-offset: 1px !important;
+}
+
 /* Pulse animation */
 @keyframes pulseGlow {
   0%, 100% { opacity: 0.6; transform: scale(1);   }
   50%       { opacity: 1;   transform: scale(1.1); }
 }
 
-/* ── Audio waveform bars ────────────────────────────────────────────────
+/* â”€â”€ Audio waveform bars â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * Used by the compact media player waveform visualiser.
  * Each bar independently oscillates in height to simulate activity.
  * --------------------------------------------------------------------- */
@@ -486,21 +506,21 @@ html, body {
 
 /* =====================================================================
  * Wallpaper-Adaptive Gradient Glow System
- * Three independently-animated colour orbs — primary, secondary, highlight.
+ * Three independently-animated colour orbs â€” primary, secondary, highlight.
  * All colours come from CSS vars set live by applyAccentPalette() in App.tsx.
  * Primary uses  --accent-glow          (palette.primary  @ 28% alpha)
  * Secondary uses --accent-secondary-glow (palette.secondary @ 22% alpha)
  * Highlight uses --accent-highlight-glow (palette.highlight @ 18% alpha)
  * ===================================================================== */
 
-/* Gentle breath — single slow pulse on the outer halo */
+/* Gentle breath â€” single slow pulse on the outer halo */
 @keyframes accentBreath {
   0%   { opacity: 0.55; }
   50%  { opacity: 0.90; }
   100% { opacity: 0.60; }
 }
 
-/* ── Outer halo ───────────────────────────────────────────────────── */
+/* â”€â”€ Outer halo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .island-accent-glow {
   background: radial-gradient(
     ellipse 75% 85% at 50% 55%,
@@ -512,7 +532,7 @@ html, body {
   animation: accentBreath 8s ease-in-out infinite alternate;
 }
 
-/* ── Stage: clips orbs to the island's rounded shape ─────────────── */
+/* â”€â”€ Stage: clips orbs to the island's rounded shape â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .island-gradient-stage {
   position: absolute;
   inset: 0;
@@ -522,7 +542,7 @@ html, body {
   z-index: 1;
 }
 
-/* ── Individual orbs ──────────────────────────────────────────────── */
+/* â”€â”€ Individual orbs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .island-grad-orb {
   position: absolute;
   border-radius: 50%;
@@ -531,9 +551,9 @@ html, body {
 }
 
 /*
- * Orb A — PRIMARY colour
+ * Orb A â€” PRIMARY colour
  * Starts at top-left, drifts slowly right-and-down, then returns.
- * Duration 14s — the slowest, largest, most visible orb.
+ * Duration 14s â€” the slowest, largest, most visible orb.
  */
 .island-grad-orb--primary {
   width: 110%;
@@ -550,9 +570,9 @@ html, body {
 }
 
 /*
- * Orb B — SECONDARY colour
+ * Orb B â€” SECONDARY colour
  * Starts at bottom-right, drifts opposite to orb A.
- * Duration 19s — medium speed, opposite phase.
+ * Duration 19s â€” medium speed, opposite phase.
  */
 .island-grad-orb--secondary {
   width: 95%;
@@ -569,9 +589,9 @@ html, body {
 }
 
 /*
- * Orb C — HIGHLIGHT colour (complementary hue)
+ * Orb C â€” HIGHLIGHT colour (complementary hue)
  * Starts centred, traces a small circular path.
- * Duration 24s — slowest, adds a third subtle hue layer.
+ * Duration 24s â€” slowest, adds a third subtle hue layer.
  */
 .island-grad-orb--highlight {
   width: 80%;
@@ -587,7 +607,7 @@ html, body {
   animation: orbHighlight 24s ease-in-out infinite;
 }
 
-/* ── Keyframes ─────────────────────────────────────────────────────── */
+/* â”€â”€ Keyframes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes orbPrimary {
   0%   { transform: translate(0%,   0%)   scale(1.00); }
   25%  { transform: translate(28%,  22%)  scale(1.08); }
@@ -612,7 +632,7 @@ html, body {
   100% { transform: translate(0%,   0%)   scale(1.00); }
 }
 
-/* ── Expanded panel overrides: scale up orb coverage ─────────────── */
+/* â”€â”€ Expanded panel overrides: scale up orb coverage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 /* Orbs are positioned as % of the container so they naturally adapt, */
 /* but we soften opacity slightly so the larger surface feels lighter. */
 .island-gradient-stage.expanded .island-grad-orb--primary   { opacity: 0.65; }
@@ -710,7 +730,7 @@ html, body {
 }
 
 /* -----------------------------------------------------------------
- * Calendar card — moving accent gradient orbs
+ * Calendar card â€” moving accent gradient orbs
  * ----------------------------------------------------------------- */
 
 /* Primary large orb that drifts across the card surface */
@@ -732,7 +752,7 @@ html, body {
   pointer-events: none;
 }
 
-/* First orb — large, slow drift */
+/* First orb â€” large, slow drift */
 .cal-accent-orb::before {
   width: 280px;
   height: 180px;
@@ -743,7 +763,7 @@ html, body {
   opacity: 0.9;
 }
 
-/* Second orb — smaller, offset drift */
+/* Second orb â€” smaller, offset drift */
 .cal-accent-orb::after {
   width: 200px;
   height: 140px;
@@ -782,11 +802,11 @@ html, body {
 /* =====================================================================
  * Charging Notification Pill
  * A transient, top-center pill that shows when the charger is plugged in.
- * All accent colors come from CSS vars set by applyAccentPalette() — fully
+ * All accent colors come from CSS vars set by applyAccentPalette() â€” fully
  * wallpaper-adaptive. The pill's interior stays near-black for contrast.
  * ===================================================================== */
 
-/* ── Outer halo glow (sits behind the pill surface) ───────────────── */
+/* â”€â”€ Outer halo glow (sits behind the pill surface) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .charging-pill-glow {
   background: radial-gradient(
     ellipse 70% 80% at 50% 30%,
@@ -804,7 +824,7 @@ html, body {
   100% { opacity: 1.0;  }
 }
 
-/* ── Pill surface ──────────────────────────────────────────────────── */
+/* â”€â”€ Pill surface â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .charging-pill-surface {
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.75),
@@ -812,7 +832,7 @@ html, body {
     0 0 0 0.5px rgba(255, 255, 255, 0.12);
 }
 
-/* ── Compact view: bolt icon ──────────────────────────────────────── */
+/* â”€â”€ Compact view: bolt icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .charging-icon {
   color: var(--accent);
   display: inline-flex;
@@ -830,13 +850,13 @@ html, body {
   50%       { opacity: 1.00; }
 }
 
-/* ── Compact view: percentage label ──────────────────────────────── */
+/* â”€â”€ Compact view: percentage label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .charging-percent {
   color: var(--accent);
   filter: drop-shadow(0 0 4px var(--accent-glow));
 }
 
-/* ── Expanded view: progress bar track ───────────────────────────── */
+/* â”€â”€ Expanded view: progress bar track â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .charging-bar-track {
   height: 6px;
   border-radius: 9999px;
@@ -845,7 +865,7 @@ html, body {
   position: relative;
 }
 
-/* ── Filled portion of the progress bar ──────────────────────────── */
+/* â”€â”€ Filled portion of the progress bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .charging-bar-fill {
   height: 100%;
   border-radius: 9999px;
@@ -864,7 +884,7 @@ html, body {
   min-width: 2%;
 }
 
-/* ── Leading edge: glowing head bubble (bolt + %) ────────────────── */
+/* â”€â”€ Leading edge: glowing head bubble (bolt + %) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .charging-bar-head {
   position: absolute;
   top: 50%;
@@ -892,13 +912,13 @@ html, body {
   50%       { box-shadow: 0 0 16px 5px var(--accent-glow), 0 0 6px 2px var(--accent-subtle); }
 }
 
-/* ── Time remaining label ─────────────────────────────────────────── */
+/* â”€â”€ Time remaining label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .charging-time-remaining {
   color: rgba(255, 255, 255, 0.52);
   letter-spacing: 0.01em;
 }
 
-/* ── Reduce motion overrides ─────────────────────────────────────── */
+/* â”€â”€ Reduce motion overrides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (prefers-reduced-motion: reduce) {
   .charging-pill-glow,
   .charging-icon,
@@ -911,7 +931,7 @@ html, body {
   }
 }
 
-/* ── Welcome Greeting Handwriting Animation ───────────────────────── */
+/* â”€â”€ Welcome Greeting Handwriting Animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes handwriting-reveal {
   0% {
     clip-path: inset(0 100% 0 0);

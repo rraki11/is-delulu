@@ -49,7 +49,7 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
   }
 
   const handleOpenSettings = (): void => {
-    setActiveTab(activeTab === 'settings' ? 'launcher' : 'settings')
+    setActiveTab(activeTab === 'settings' ? 'controls' : 'settings')
   }
 
   return (
@@ -64,10 +64,10 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
         userSelect: 'none'
       }}
     >
-      {/* Dynamic Greeting & Live Clock - Click to open Calendar */}
+      {/* Dynamic Greeting & Live Clock - Click to open Today */}
       <div
-        onClick={() => setActiveTab('calendar')}
-        title="Open Calendar"
+        onClick={() => setActiveTab('today')}
+        title="Open Today"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -97,7 +97,7 @@ export const IslandHeader: React.FC<IslandHeaderProps> = ({ onCollapse }) => {
         >
           {greeting}
         </span>
-        <span style={{ fontSize: '11px', lineHeight: '16px', color: 'var(--text-muted)' }}>•</span>
+        <span style={{ fontSize: '11px', lineHeight: '16px', color: 'var(--text-muted)' }}>â€¢</span>
         <span
           className="tabular-nums font-display"
           style={{

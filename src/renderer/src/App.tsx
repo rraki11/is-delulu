@@ -22,13 +22,15 @@ export const App: React.FC = () => {
     setRoutines,
     statusMessage,
     setStatusMessage,
-    setBatteryState
+    setBatteryState,
+    activeTab
   } = useIslandStore()
 
   const isIgnoringRef = useRef(true)
   const currentThemeRef = useRef<'light' | 'dark'>('dark')
   const currentPaletteRef = useRef<AccentPalette | null>(null)
   const cachedSurfaceRectRef = useRef<{ left: number; right: number; top: number; bottom: number } | null>(null)
+  const latestPointerPosRef = useRef<{ x: number; y: number }>({ x: -9999, y: -9999 })
   const wasInsidePointerRef = useRef(false)
 
   // Double-rAF handshake: signals to main process once the initial frame is rendered to display window with 0 blank frames
@@ -220,38 +222,63 @@ export const App: React.FC = () => {
         !isLight
       )
 
+      // Calculate accessible contrast for text rendered directly on --accent backgrounds
+      let lum = 0.5
+      try {
+        lum = (0.299 * pr + 0.587 * pg + 0.114 * pb) / 255
+      } catch {}
+      const textOnAccent = lum > 0.65 ? '#0A0D0E' : '#FFFFFF'
+
+      const accentGlow = isLight
+        ? `rgba(${pr}, ${pg}, ${pb}, 0.18)`
+        : `rgba(${pr}, ${pg}, ${pb}, 0.22)`
+      const accentMuted = isLight
+        ? `rgba(${pr}, ${pg}, ${pb}, 0.50)`
+        : `rgba(${pr}, ${pg}, ${pb}, 0.40)`
+      const accentSubtle = isLight
+        ? `rgba(${pr}, ${pg}, ${pb}, 0.08)`
+        : `rgba(${pr}, ${pg}, ${pb}, 0.10)`
+      const accentBorder = isLight
+        ? `rgba(${pr}, ${pg}, ${pb}, 0.24)`
+        : `rgba(${pr}, ${pg}, ${pb}, 0.35)`
+      const borderActive = isLight
+        ? `rgba(${pr}, ${pg}, ${pb}, 0.35)`
+        : `rgba(${pr}, ${pg}, ${pb}, 0.45)`
+
+      // Shared Adaptive Wallpaper Design Tokens (Authoritative Source)
+      root.style.setProperty('--wallpaper-accent-primary', primary)
+      root.style.setProperty('--wallpaper-accent-secondary', secondary)
+      root.style.setProperty('--wallpaper-accent-tertiary', highlight)
+      root.style.setProperty('--wallpaper-accent-muted', accentMuted)
+      root.style.setProperty('--wallpaper-accent-glow', accentGlow)
+      root.style.setProperty('--wallpaper-accent-foreground', textOnAccent)
+
+      // Bridge tokens for consistent propagation across all 7 tabs and island shell
+      root.style.setProperty('--hitodama-accent', primary)
+      root.style.setProperty('--accent-primary', primary)
       root.style.setProperty('--accent', primary)
       root.style.setProperty('--accent-secondary', secondary)
       root.style.setProperty('--accent-highlight', highlight)
+      root.style.setProperty('--accent-muted', accentMuted)
+      root.style.setProperty('--accent-glow', accentGlow)
       root.style.setProperty(
-        '--accent-glow',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.16)` : `rgba(${pr}, ${pg}, ${pb}, 0.14)`
+        '--accent-secondary-glow',
+        isLight ? `rgba(${sr}, ${sg}, ${sb}, 0.14)` : `rgba(${sr}, ${sg}, ${sb}, 0.10)`
       )
       root.style.setProperty(
-        '--accent-subtle',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.08)` : `rgba(${pr}, ${pg}, ${pb}, 0.10)`
+        '--accent-highlight-glow',
+        isLight ? `rgba(${hr}, ${hg}, ${hb}, 0.12)` : `rgba(${hr}, ${hg}, ${hb}, 0.08)`
       )
-      root.style.setProperty(
-        '--accent-border',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.22)` : `rgba(${pr}, ${pg}, ${pb}, 0.32)`
-      )
-      root.style.setProperty(
-        '--border-active',
-        isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.35)` : `rgba(${pr}, ${pg}, ${pb}, 0.45)`
-      )
+      root.style.setProperty('--accent-subtle', accentSubtle)
+      root.style.setProperty('--accent-border', accentBorder)
+      root.style.setProperty('--border-active', borderActive)
       root.style.setProperty(
         '--border-glass',
         isLight ? 'rgba(255, 255, 255, 0.80)' : 'rgba(255, 255, 255, 0.07)'
       )
       root.style.setProperty('--text-accent', textAccent)
-      root.style.setProperty(
-        '--accent-secondary-glow',
-        isLight ? `rgba(${sr}, ${sg}, ${sb}, 0.14)` : `rgba(${sr}, ${sg}, ${sb}, 0.08)`
-      )
-      root.style.setProperty(
-        '--accent-highlight-glow',
-        isLight ? `rgba(${hr}, ${hg}, ${hb}, 0.12)` : `rgba(${hr}, ${hg}, ${hb}, 0.06)`
-      )
+      root.style.setProperty('--text-on-accent', textOnAccent)
+      root.style.setProperty('--nav-item-active-color', primary)
 
       // First Page (Launcher) dynamic palette tokens
       root.style.setProperty(
@@ -276,7 +303,6 @@ export const App: React.FC = () => {
         isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.14)` : `rgba(${pr}, ${pg}, ${pb}, 0.20)`
       )
       root.style.setProperty('--search-item-icon-color', primary)
-      root.style.setProperty('--nav-item-active-color', primary)
       root.style.setProperty(
         '--border-card-hover',
         isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.30)` : `rgba(${pr}, ${pg}, ${pb}, 0.40)`
@@ -285,13 +311,6 @@ export const App: React.FC = () => {
         '--card-hover-glow',
         isLight ? `rgba(${pr}, ${pg}, ${pb}, 0.16)` : `rgba(${pr}, ${pg}, ${pb}, 0.14)`
       )
-
-      // Calculate accessible contrast for text rendered directly on --accent backgrounds
-      let lum = 0.5
-      try {
-        lum = (0.299 * pr + 0.587 * pg + 0.114 * pb) / 255
-      } catch {}
-      root.style.setProperty('--text-on-accent', lum > 0.65 ? '#0A0D0E' : '#FFFFFF')
     },
     [setAccentPalette]
   )
@@ -372,6 +391,22 @@ export const App: React.FC = () => {
       if (isHovered) {
         handlePointerEnter()
       } else {
+        // Pre-validate before accepting false hover exit from main process:
+        // If cursor is physically over the surface in renderer DOM, ignore main process false exit!
+        const surface = document.getElementById('island-surface')
+        if (surface) {
+          const r = surface.getBoundingClientRect()
+          const x = latestPointerPosRef.current.x
+          const y = latestPointerPosRef.current.y
+          if (
+            x >= r.left - 10 &&
+            x <= r.right + 10 &&
+            y >= r.top - 6 &&
+            y <= r.bottom + 10
+          ) {
+            return
+          }
+        }
         handlePointerLeave()
       }
     })
@@ -612,30 +647,55 @@ export const App: React.FC = () => {
     preferences?.appearance
   ])
 
-  // Recalculate surface bounds only when mode, dimensions, or notification states change
+  // Recalculate and synchronize surface bounds when mode, dimensions, active tab, or notification states change
   useEffect(() => {
+    let resizeObserver: ResizeObserver | null = null
+
     const updateRect = () => {
       const surface = document.getElementById('island-surface')
       if (surface) {
         const r = surface.getBoundingClientRect()
         cachedSurfaceRectRef.current = { left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+        if (window.isDelulu?.updateSurfaceBounds) {
+          window.isDelulu.updateSurfaceBounds({
+            x: Math.round(r.left),
+            y: Math.round(r.top),
+            width: Math.round(r.width),
+            height: Math.round(r.height)
+          })
+        }
       } else {
         cachedSurfaceRectRef.current = null
       }
     }
 
     updateRect()
-    const timer = setTimeout(updateRect, 120)
+
+    // Observe live DOM layout changes of island-surface to eliminate stale cached bounds
+    const surfaceEl = document.getElementById('island-surface')
+    if (surfaceEl && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        updateRect()
+      })
+      resizeObserver.observe(surfaceEl)
+    }
+
+    const timer = setTimeout(updateRect, 100)
     window.addEventListener('resize', updateRect)
     return () => {
       clearTimeout(timer)
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
       window.removeEventListener('resize', updateRect)
     }
-  }, [currentMode, isChargingActive, isNotificationActive, activeNotification])
+  }, [currentMode, activeTab, isChargingActive, isNotificationActive, activeNotification])
 
   // Track global pointer movements for hit testing & click pass-through
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent): void => {
+      latestPointerPosRef.current = { x: e.clientX, y: e.clientY }
+
       // 1. While any notification is active, hit-test the active notification pill surface
       if (isNotificationActiveRef.current) {
         const notifSurface = isChargingActiveRef.current
@@ -684,10 +744,10 @@ export const App: React.FC = () => {
       }
 
       const isInside =
-        e.clientX >= rect.left - 20 &&
-        e.clientX <= rect.right + 20 &&
-        e.clientY >= -10 &&
-        e.clientY <= rect.bottom + 14
+        e.clientX >= rect.left - 16 &&
+        e.clientX <= rect.right + 16 &&
+        e.clientY >= -6 &&
+        e.clientY <= rect.bottom + 12
 
       updateMouseHitTest(isInside)
 

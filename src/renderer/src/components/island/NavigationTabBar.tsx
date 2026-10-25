@@ -105,6 +105,7 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               onKeyDown={(e) => handleKeyDown(e, idx)}
+              className={`hitodama-nav-tab-btn ${isActive ? 'active' : ''}`}
               style={{
                 width: `${tab.width}px`,
                 height: '30px',
@@ -119,21 +120,44 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
                 fontWeight: isActive ? 600 : 500,
                 letterSpacing: '-0.01em',
                 position: 'relative',
-                background: isActive ? 'var(--hitodama-accent, #D7B56D)' : 'transparent',
-                color: isActive ? '#141310' : '#8E919A',
-                boxShadow: isActive ? '0 2px 8px rgba(0, 0, 0, 0.28)' : 'none',
-                transition: 'color 180ms ease, background-color 180ms ease'
-              }}
-              whileHover={{
-                color: isActive ? '#141310' : '#F4F5F7',
-                backgroundColor: isActive
-                  ? 'var(--hitodama-accent, #D7B56D)'
-                  : 'rgba(255, 255, 255, 0.06)'
+                background: 'transparent',
+                color: isActive
+                  ? 'var(--wallpaper-accent-foreground, var(--text-on-accent, #141310))'
+                  : '#8E919A',
+                padding: 0,
+                WebkitTapHighlightColor: 'transparent'
               }}
               whileTap={{ scale: 0.96 }}
-              transition={{ duration: 0.18, ease: HITODAMA_EASING }}
             >
-              {tab.label}
+              {isActive && (
+                <motion.div
+                  layoutId="hitodama-active-tab-indicator"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '9999px',
+                    background: 'var(--wallpaper-accent-primary, var(--hitodama-accent, #D7B56D))',
+                    boxShadow:
+                      '0 2px 8px rgba(0, 0, 0, 0.28), 0 0 10px var(--wallpaper-accent-glow, rgba(215, 181, 109, 0.2))',
+                    zIndex: 1
+                  }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 450,
+                    damping: 35
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  position: 'relative',
+                  zIndex: 2,
+                  pointerEvents: 'none',
+                  transition: 'color 180ms ease'
+                }}
+              >
+                {tab.label}
+              </span>
             </motion.button>
           )
         })}

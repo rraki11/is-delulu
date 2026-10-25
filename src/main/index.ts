@@ -1,4 +1,6 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, screen, powerMonitor } from 'electron'
+import { app, BrowserWindow, ipcMain, globalShortcut, screen, powerMonitor, protocol, net } from 'electron'
+import { pathToFileURL } from 'url'
+import { existsSync } from 'fs'
 import {
   createMainWindow,
   getMainWindow,
@@ -17,7 +19,8 @@ import {
   resetWelcomeShownForResume,
   showIslandWindowForWelcome,
   handleRendererReady,
-  setMockCursorPoint
+  setMockCursorPoint,
+  updateActiveSurfaceRect
 } from './window'
 import { setupTray } from './tray'
 import { getSystemStats } from './services/system'
@@ -93,9 +96,94 @@ if (!gotTheLock) {
   app.commandLine.appendSwitch('disable-renderer-backgrounding')
   app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
 
+  // Register secure custom schemes before app ready
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'wallpaper-thumb',
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        bypassCSP: true,
+        stream: true
+      }
+    },
+    {
+      scheme: 'atom',
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        bypassCSP: true,
+        stream: true
+      }
+    }
+  ])
+
   // App lifecycle
   app.whenReady().then(() => {
     perfTracker.record('main_process_ready')
+
+    // Register wallpaper thumbnail protocol handler
+    protocol.handle('wallpaper-thumb', async (request) => {
+      try {
+        const parsed = new URL(request.url)
+        let targetPath = parsed.searchParams.get('file') || ''
+        if (!targetPath) {
+          targetPath = decodeURIComponent(parsed.pathname)
+          if (parsed.host && parsed.host.includes(':')) {
+            targetPath = decodeURIComponent(`${parsed.host}${parsed.pathname}`)
+          }
+        }
+        if (process.platform === 'win32' && targetPath.startsWith('/') && !targetPath.startsWith('//')) {
+          targetPath = targetPath.slice(1)
+        }
+
+        if (!targetPath || !existsSync(targetPath)) {
+          return new Response('File not found', { status: 404 })
+        }
+
+        // Return native pre-scaled 360x225 thumbnail
+        const dataUrl = getWallpaperThumbnail(targetPath)
+        if (dataUrl && dataUrl.startsWith('data:image/png;base64,')) {
+          const buffer = Buffer.from(dataUrl.slice('data:image/png;base64,'.length), 'base64')
+          return new Response(buffer, {
+            headers: {
+              'Content-Type': 'image/png',
+              'Cache-Control': 'public, max-age=86400'
+            }
+          })
+        }
+
+        return net.fetch(pathToFileURL(targetPath).toString())
+      } catch (err) {
+        console.error('[WallpaperProtocol] Error serving wallpaper-thumb:', err)
+        return new Response('Error loading thumbnail', { status: 500 })
+      }
+    })
+
+    // Register backward-compatible atom protocol handler
+    protocol.handle('atom', async (request) => {
+      try {
+        const parsed = new URL(request.url)
+        let targetPath = decodeURIComponent(parsed.pathname)
+        if (parsed.host && parsed.host.includes(':')) {
+          targetPath = decodeURIComponent(`${parsed.host}${parsed.pathname}`)
+        }
+        if (process.platform === 'win32' && targetPath.startsWith('/') && !targetPath.startsWith('//')) {
+          targetPath = targetPath.slice(1)
+        }
+
+        if (targetPath && existsSync(targetPath)) {
+          return net.fetch(pathToFileURL(targetPath).toString())
+        }
+        return new Response('File not found', { status: 404 })
+      } catch {
+        return new Response('Error loading atom resource', { status: 500 })
+      }
+    })
 
     // Initialize persistent user preferences
     initPreferences()
@@ -362,6 +450,11 @@ if (!gotTheLock) {
         mainWindow.setIgnoreMouseEvents(false)
       }
     }
+  })
+
+  // Synchronize dynamic surface bounds from renderer for authoritative hit-testing
+  ipcMain.handle('island:update-surface-bounds', (_event, bounds) => {
+    updateActiveSurfaceRect(bounds)
   })
 
   // Auto-collapse when clicking outside into another app (unless pinned)

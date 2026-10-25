@@ -11,6 +11,22 @@ let prevNetBytes = { rx: 0, tx: 0, time: 0 }
 let cachedNetDownloadKbps = 0
 let cachedNetUploadKbps = 0
 
+let cachedGpuStats: {
+  usage: number | null
+  model: string | null
+  vramUsedGb: number | null
+  vramTotalGb: number | null
+} = {
+  usage: null,
+  model: null,
+  vramUsedGb: null,
+  vramTotalGb: null
+}
+
+let isNvidiaSmiChecked = false
+let isNvidiaSmiAvailable = false
+let isGpuStaticQueried = false
+
 function getCpuTimes(): { idle: number; total: number } {
   const cpus = os.cpus()
   let idle = 0
@@ -99,11 +115,16 @@ function updateTopApps(): void {
         cachedTopApps = sorted.map(([name, memKb], idx) => {
           const ramPercent = Math.min(100, Math.round((memKb / totalSysMemKb) * 100))
           const colors = ['#4285F4', '#007ACC', '#1DB954', '#5865F2', '#E4C77C']
+          const memMb = Math.round(memKb / 1024)
+          const memFormatted = memMb >= 1024
+            ? `${(memMb / 1024).toFixed(1)} GB`
+            : `${memMb} MB`
           return {
             name,
             ramPercent: Math.max(1, ramPercent),
             cpuPercent: Math.max(1, Math.round((6 - idx) * 3)),
-            color: colors[idx % colors.length]
+            color: colors[idx % colors.length],
+            memFormatted
           }
         })
       }
@@ -133,17 +154,84 @@ function updateNetworkMetrics(): void {
   }
 }
 
+// Update real Windows GPU telemetry (supports NVIDIA GPUs via nvidia-smi with WMI fallback)
+function updateGpuMetrics(): void {
+  if (process.platform !== 'win32') return
+
+  if (!isNvidiaSmiChecked || isNvidiaSmiAvailable) {
+    exec(
+      'nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits',
+      (err, stdout) => {
+        isNvidiaSmiChecked = true
+        if (!err && stdout) {
+          const parts = stdout.trim().split(',').map((s) => s.trim())
+          if (parts.length >= 4) {
+            isNvidiaSmiAvailable = true
+            const model = parts[0]
+            const usage = parseInt(parts[1], 10)
+            const usedMb = parseInt(parts[2], 10)
+            const totalMb = parseInt(parts[3], 10)
+
+            cachedGpuStats = {
+              model,
+              usage: isNaN(usage) ? null : Math.max(0, Math.min(100, usage)),
+              vramUsedGb: isNaN(usedMb) ? null : Math.round((usedMb / 1024) * 10) / 10,
+              vramTotalGb: isNaN(totalMb) ? null : Math.round((totalMb / 1024) * 10) / 10
+            }
+            return
+          }
+        }
+
+        isNvidiaSmiAvailable = false
+        fallbackGpuQuery()
+      }
+    )
+  } else {
+    fallbackGpuQuery()
+  }
+}
+
+function fallbackGpuQuery(): void {
+  if (!isGpuStaticQueried) {
+    exec(
+      'powershell -NoProfile -Command "Get-CimInstance Win32_VideoController | Select-Object -Property Name, AdapterRAM | ConvertTo-Json"',
+      (err, stdout) => {
+        if (!err && stdout) {
+          try {
+            const data = JSON.parse(stdout)
+            const list = Array.isArray(data) ? data : [data]
+            const gpu = list.find((g: any) => g.Name && !g.Name.includes('Basic Display')) || list[0]
+            if (gpu && gpu.Name) {
+              const ramBytes = gpu.AdapterRAM || 0
+              const vramGb = ramBytes > 0 ? Math.round((ramBytes / (1024 * 1024 * 1024)) * 10) / 10 : null
+              cachedGpuStats = {
+                model: gpu.Name,
+                usage: null,
+                vramUsedGb: null,
+                vramTotalGb: vramGb
+              }
+              isGpuStaticQueried = true
+            }
+          } catch {}
+        }
+      }
+    )
+  }
+}
+
 // Update system metrics on background interval
 setInterval(() => {
   updateDiskMetrics()
   updateTopApps()
   updateNetworkMetrics()
-}, 6000)
+  updateGpuMetrics()
+}, 5000)
 
 // Initial immediate sampling
 updateDiskMetrics()
 updateTopApps()
 updateNetworkMetrics()
+updateGpuMetrics()
 
 export function getSystemStats(): SystemStats {
   const totalMem = os.totalmem()
@@ -184,6 +272,10 @@ export function getSystemStats(): SystemStats {
     diskFreeGb: cachedDiskStats.freeGb,
     netDownloadKbps: cachedNetDownloadKbps,
     netUploadKbps: cachedNetUploadKbps,
-    topApps: cachedTopApps
+    topApps: cachedTopApps,
+    gpuUsage: cachedGpuStats.usage,
+    gpuModel: cachedGpuStats.model,
+    vramUsedGb: cachedGpuStats.vramUsedGb,
+    vramTotalGb: cachedGpuStats.vramTotalGb
   }
 }

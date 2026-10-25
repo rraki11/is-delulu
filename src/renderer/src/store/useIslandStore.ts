@@ -46,7 +46,7 @@ interface IslandState {
 
 export const useIslandStore = create<IslandState>((set) => ({
   mode: 'hidden',
-  activeTab: 'launcher',
+  activeTab: 'controls',
   searchQuery: '',
   isAlwaysOnTop: true,
   systemStats: null,

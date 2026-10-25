@@ -43,6 +43,7 @@ function savePaletteCache(key: string, palette: AccentPalette): void {
 // Watcher and timer
 let themesWatcher: FSWatcher | null = null
 let pollTimer: NodeJS.Timeout | null = null
+let watchDebounceTimer: NodeJS.Timeout | null = null
 let lastKnownPath = ''
 let lastKnownMtime = 0
 
@@ -619,8 +620,9 @@ export function startWallpaperMonitor(onUpdate: (palette: AccentPalette) => void
     const themesDir = join(appData, 'Microsoft/Windows/Themes')
     if (existsSync(themesDir)) {
       themesWatcher = watch(themesDir, (_eventType, _fileName) => {
-        // Debounce slightly to allow file writes to finish
-        setTimeout(checkWallpaper, 400)
+        // Debounce to allow Windows file writes to complete cleanly without thrashing
+        if (watchDebounceTimer) clearTimeout(watchDebounceTimer)
+        watchDebounceTimer = setTimeout(checkWallpaper, 400)
       })
     }
   } catch (watchErr) {
@@ -635,6 +637,10 @@ export function startWallpaperMonitor(onUpdate: (palette: AccentPalette) => void
  * Stops wallpaper monitoring
  */
 export function stopWallpaperMonitor(): void {
+  if (watchDebounceTimer) {
+    clearTimeout(watchDebounceTimer)
+    watchDebounceTimer = null
+  }
   if (themesWatcher) {
     try {
       themesWatcher.close()

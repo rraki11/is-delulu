@@ -30,6 +30,7 @@ export type TransitionLifecycleState =
 let transitionState: TransitionLifecycleState = 'idle'
 let transitionStartTime = 0
 let activeTransitionWin: BrowserWindow | null = null
+let latestWallpaperSessionId = 0
 
 const TRANSITION_WATCHDOG_TIMEOUT_MS = 10000 // 10 seconds max duration before auto-recovery
 const SET_WALLPAPER_TIMEOUT_MS = 6000 // 6 seconds max for native wallpaper update
@@ -434,6 +435,7 @@ export async function applyWallpaperAsDesktop(
   // Safely clean up any leftover overlay window from earlier calls
   cleanUpActiveOverlay()
 
+  const sessionId = ++latestWallpaperSessionId
   transitionState = 'preparing'
   transitionStartTime = Date.now()
   pauseWallpaperMonitor()
@@ -579,6 +581,7 @@ export async function applyWallpaperAsDesktop(
       resumeWallpaperMonitor(filePath)
       // Defer palette extraction slightly so main thread and renderer stay completely idle during wrap-up
       setTimeout(() => {
+        if (sessionId !== latestWallpaperSessionId) return
         const prefs = getPreferences()
         const win = getMainWindow()
         if (prefs.accentMode === 'wallpaper' && win && !win.isDestroyed()) {

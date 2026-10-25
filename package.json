@@ -9,7 +9,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build && node -e \"const fs = require('fs'); fs.mkdirSync('out/main/services', { recursive: true }); fs.copyFileSync('src/main/services/gsmtc-daemon.ps1', 'out/main/services/gsmtc-daemon.ps1'); fs.copyFileSync('src/main/services/battery-daemon.ps1', 'out/main/services/battery-daemon.ps1'); fs.copyFileSync('src/main/services/set-wallpaper.ps1', 'out/main/services/set-wallpaper.ps1'); if (fs.existsSync('src/main/services/set-wallpaper.exe')) fs.copyFileSync('src/main/services/set-wallpaper.exe', 'out/main/services/set-wallpaper.exe'); fs.copyFileSync('src/main/services/wallpaper-reveal.html', 'out/main/services/wallpaper-reveal.html');\"",
     "typecheck": "tsc --noEmit",
-    "test": "node test/interruption-verification.cjs",
+    "test": "node test/interruption-verification.cjs && node test/palette-extraction.test.cjs && node test/activation-and-autohide.test.cjs && node test/stats-telemetry.test.cjs && node test/nav-highlight.test.cjs",
     "preview": "electron-vite preview"
   },
   "dependencies": {

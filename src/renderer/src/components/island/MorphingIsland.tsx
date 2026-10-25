@@ -91,7 +91,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
   const isHidden = mode === 'hidden'
   const [time, setTime] = useState<string>('')
 
-  // ── Welcome greeting animation lifecycle ────────────────────────────────
+  // â”€â”€ Welcome greeting animation lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Sequence: entering (520ms) -> settling (180ms) -> writing (dynamic) -> holding (1000ms) -> fading (450ms) -> pausing (600ms) -> revealing (450ms) -> [clock_dwell (1000ms) -> clock_fading (380ms) -> clock_pause (220ms)] -> done
   type WelcomeStage =
     | 'idle'
@@ -333,7 +333,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
 
   const handleExecuteAction = async (id: string, target?: string): Promise<void> => {
     if (id === 'calendar' || id === 'cmd-open-calendar') {
-      setActiveTab('calendar')
+      setActiveTab('today')
       return
     }
     if (window.isDelulu) {
@@ -361,7 +361,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // ── Unified Morphology & Geometry ──────────────────────────────────────────
+  // â”€â”€ Unified Morphology & Geometry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const isChargingExpanded = isChargingActive && chargingPhase === 'expanded'
   const isChargingExiting = isChargingActive && chargingPhase === 'exiting'
 
@@ -428,7 +428,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
 
   return (
     <>
-      {/* Wallpaper-adaptive gradient halo — sits OUTSIDE overflow:hidden so it bleeds */}
+      {/* Wallpaper-adaptive gradient halo â€” sits OUTSIDE overflow:hidden so it bleeds */}
       <motion.div
         key={`island-glow-${welcomeKey}`}
         aria-hidden="true"
@@ -554,7 +554,7 @@ export const MorphingIsland: React.FC<MorphingIslandProps> = ({
           transition: 'box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1), border-color 380ms ease'
         }}
       >
-        {/* Wallpaper-adaptive animated gradient — three color orbs drift independently */}
+        {/* Wallpaper-adaptive animated gradient â€” three color orbs drift independently */}
         <div
           className={`island-gradient-stage${isExpanded ? ' expanded' : ''}`}
           aria-hidden="true"

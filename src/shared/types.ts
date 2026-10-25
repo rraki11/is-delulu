@@ -43,6 +43,8 @@ export interface AccentPalette {
   subtle: string
   border: string
   text: string
+  muted?: string
+  foreground?: string
   sourceWallpaper?: string
 }
 
@@ -73,6 +75,7 @@ export interface WallpaperItem {
   filePath: string
   fileSize: number
   modifiedTime: number
+  thumbnailUrl?: string
 }
 
 export interface UserPreferences {
@@ -104,6 +107,7 @@ export interface TopAppItem {
   ramPercent: number
   cpuPercent: number
   color?: string
+  memFormatted?: string
 }
 
 export interface SystemStats {
@@ -127,6 +131,11 @@ export interface SystemStats {
   netDownloadKbps?: number
   netUploadKbps?: number
   topApps?: TopAppItem[]
+  // GPU metrics
+  gpuUsage?: number | null
+  gpuModel?: string | null
+  vramUsedGb?: number | null
+  vramTotalGb?: number | null
 }
 
 export interface ClipboardItem {
@@ -283,6 +292,13 @@ export interface WindowDimensions {
   height: number
 }
 
+export interface SurfaceBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export interface IsDeluluAPI {
   // Window management
   setIslandMode: (mode: IslandMode) => Promise<void>
@@ -296,6 +312,7 @@ export interface IsDeluluAPI {
   isAlwaysOnTop: () => Promise<boolean>
   setAlwaysOnTop: (enabled: boolean) => Promise<void>
   setIgnoreMouseEvents: (ignore: boolean, forward?: boolean) => Promise<void>
+  updateSurfaceBounds?: (bounds: SurfaceBounds) => Promise<void>
 
   // System statistics
   getSystemStats: () => Promise<SystemStats>

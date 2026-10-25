@@ -71,6 +71,9 @@ const isDeluluAPI: IsDeluluAPI = {
   setIgnoreMouseEvents: (ignore: boolean, forward = true): Promise<void> => {
     return ipcRenderer.invoke('window:set-ignore-mouse-events', ignore, forward)
   },
+  updateSurfaceBounds: (bounds): Promise<void> => {
+    return ipcRenderer.invoke('island:update-surface-bounds', bounds)
+  },
 
   // System stats
   getSystemStats: (): Promise<SystemStats> => {

@@ -196,6 +196,19 @@ export function useIslandStateMachine({
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
   const revealTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Monotonic generation token to invalidate stale asynchronous timers
+  const transitionGenerationRef = useRef(0)
+
+  // Track latest cursor position for pre-execution auto-hide/collapse revalidation
+  const latestPointerPosRef = useRef({ x: -9999, y: -9999 })
+  useEffect(() => {
+    const handleWindowMouseMove = (e: MouseEvent): void => {
+      latestPointerPosRef.current = { x: e.clientX, y: e.clientY }
+    }
+    window.addEventListener('mousemove', handleWindowMouseMove, { passive: true })
+    return () => window.removeEventListener('mousemove', handleWindowMouseMove)
+  }, [])
+
   // Notification session and timer tracking
   const notificationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const notificationSessionIdRef = useRef(0)
@@ -264,6 +277,7 @@ export function useIslandStateMachine({
   updateMouseHitTestRef.current = updateMouseHitTest
 
   const clearHoverTimers = useCallback(() => {
+    transitionGenerationRef.current++
     if (hoverTimerRef.current) {
       clearTimeout(hoverTimerRef.current)
       hoverTimerRef.current = null
@@ -284,6 +298,7 @@ export function useIslandStateMachine({
   // Transition to a state and notify parent and native window
   const transitionTo = useCallback(
     (nextState: IslandState) => {
+      transitionGenerationRef.current++
       stateRef.current = nextState
       setState(nextState)
 
@@ -310,16 +325,40 @@ export function useIslandStateMachine({
   const startMinVisibilityTimer = useCallback(
     (customDuration?: number) => {
       clearHoverTimers()
-
+      const generation = ++transitionGenerationRef.current
       const duration = typeof customDuration === 'number' ? customDuration : 1800
 
       hoverTimerRef.current = setTimeout(() => {
+        // 1. Generation check: reject stale timers if state or hover changed
+        if (generation !== transitionGenerationRef.current) return
+
+        // 2. Lifecycle check
         if (
           isPinnedRef.current ||
           isHoveredRef.current ||
           isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)
-        )
+        ) {
           return
+        }
+
+        // 3. Pre-execution revalidation against real DOM bounds of #island-surface
+        const surface = document.getElementById('island-surface')
+        if (surface) {
+          const rect = surface.getBoundingClientRect()
+          const x = latestPointerPosRef.current.x
+          const y = latestPointerPosRef.current.y
+          const isPhysicallyInside =
+            x >= rect.left - 10 &&
+            x <= rect.right + 10 &&
+            y >= rect.top - 10 &&
+            y <= rect.bottom + 10
+
+          if (isPhysicallyInside) {
+            // Cancel auto-hide: cursor is physically still on the island
+            isHoveredRef.current = true
+            return
+          }
+        }
 
         // Blur any active element before hiding
         if (document.activeElement instanceof HTMLElement) {
@@ -338,14 +377,39 @@ export function useIslandStateMachine({
   // Step 1 of auto-hide: On mouse leave while expanded, collapse to compact pill after 500ms grace
   const startGraceCollapseTimer = useCallback(() => {
     clearHoverTimers()
+    const generation = ++transitionGenerationRef.current
 
     hoverTimerRef.current = setTimeout(() => {
+      // 1. Generation check: reject stale timers
+      if (generation !== transitionGenerationRef.current) return
+
+      // 2. Lifecycle check
       if (
         isPinnedRef.current ||
         isHoveredRef.current ||
         isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)
-      )
+      ) {
         return
+      }
+
+      // 3. Pre-execution revalidation against real DOM bounds of #island-surface
+      const surface = document.getElementById('island-surface')
+      if (surface) {
+        const rect = surface.getBoundingClientRect()
+        const x = latestPointerPosRef.current.x
+        const y = latestPointerPosRef.current.y
+        const isPhysicallyInside =
+          x >= rect.left - 10 &&
+          x <= rect.right + 10 &&
+          y >= rect.top - 10 &&
+          y <= rect.bottom + 10
+
+        if (isPhysicallyInside) {
+          // Cancel auto-collapse: cursor is physically still inside the surface
+          isHoveredRef.current = true
+          return
+        }
+      }
 
       transitionTo('COLLAPSED')
       startMinVisibilityTimer(1800)
@@ -358,6 +422,7 @@ export function useIslandStateMachine({
     if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
 
     clearHoverTimers()
+    const generation = ++transitionGenerationRef.current
 
     if (isPinnedRef.current) {
       transitionTo('COLLAPSED')
@@ -367,6 +432,7 @@ export function useIslandStateMachine({
     if (stateRef.current === 'HIDDEN' || stateRef.current === 'NORMAL_REVEALING') {
       transitionTo('NORMAL_REVEALING')
       revealTimerRef.current = setTimeout(() => {
+        if (generation !== transitionGenerationRef.current) return
         if (stateRef.current === 'NORMAL_REVEALING') {
           transitionTo('COLLAPSED')
           if (!isHoveredRef.current && !isPinnedRef.current) {
@@ -385,9 +451,8 @@ export function useIslandStateMachine({
   // Pointer events on the island surface (strictly idempotent to prevent high-frequency timer thrashing)
   const handlePointerEnter = useCallback(() => {
     if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
-    if (isHoveredRef.current && stateRef.current !== 'HIDDEN' && stateRef.current !== 'NORMAL_REVEALING') return
-    isHoveredRef.current = true
     clearHoverTimers()
+    isHoveredRef.current = true
 
     if (stateRef.current === 'PINNED') return
 

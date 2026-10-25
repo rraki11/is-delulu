@@ -20,14 +20,22 @@ let initialWindowShown = false
 
 // Cached primary display work area to avoid expensive continuous native OS display enumeration
 let cachedPrimaryWorkArea = { x: 0, y: 0, width: 1920, height: 1080 }
+let cachedPrimaryBounds = { x: 0, y: 0, width: 1920, height: 1080 }
 let cachedCenterX = 960
+let liveSurfaceRect: { x: number; y: number; width: number; height: number } | null = null
+let wasInActivationZone = false
 
 export function updateCachedDisplayMetrics(): void {
   try {
     const primaryDisplay = screen.getPrimaryDisplay()
     cachedPrimaryWorkArea = primaryDisplay.workArea
-    cachedCenterX = cachedPrimaryWorkArea.x + cachedPrimaryWorkArea.width / 2
+    cachedPrimaryBounds = primaryDisplay.bounds
+    cachedCenterX = cachedPrimaryBounds.x + cachedPrimaryBounds.width / 2
   } catch {}
+}
+
+export function updateActiveSurfaceRect(rect: { x: number; y: number; width: number; height: number } | null): void {
+  liveSurfaceRect = rect
 }
 
 export function handleRendererReady(): void {
@@ -298,6 +306,14 @@ export function setIslandWindowMode(mode: IslandMode): void {
   console.log(`[is-delulu:window] Mode set to '${mode}'. Current visible: ${mainWindow.isVisible()}`)
 
   if (mode === 'hidden') {
+    isHoverInWindowOrZone = false
+    liveSurfaceRect = null
+    const pt = mockCursorPoint || screen.getCursorScreenPoint()
+    wasInActivationZone =
+      pt.y >= cachedPrimaryBounds.y &&
+      pt.y <= cachedPrimaryBounds.y + 4 &&
+      Math.abs(pt.x - cachedCenterX) <= 100
+
     if (!forceVisibleDebug && !isNotificationOngoing()) {
       mainWindow.setIgnoreMouseEvents(true, { forward: true })
       // Allow the smooth collapse animation into the top border to finish before native hide
@@ -419,6 +435,14 @@ export function hideIslandWindow(): void {
   if (prefs.isPinned) return // Respect pinned state
 
   currentMode = 'hidden'
+  isHoverInWindowOrZone = false
+  liveSurfaceRect = null
+  const pt = mockCursorPoint || screen.getCursorScreenPoint()
+  wasInActivationZone =
+    pt.y >= cachedPrimaryBounds.y &&
+    pt.y <= cachedPrimaryBounds.y + 4 &&
+    Math.abs(pt.x - cachedCenterX) <= 100
+
   mainWindow.setIgnoreMouseEvents(true, { forward: true })
   mainWindow.webContents.send('island:mode-changed', 'hidden')
   setTimeout(() => {
@@ -437,8 +461,8 @@ export function hideIslandWindow(): void {
 
 /**
  * Monitors cursor position on the primary monitor.
- * Detects pointer strictly at the actual top-center edge (minimal practical height 2-3px).
- * When the pointer reaches the actual top edge near center while hidden, it reveals the pill.
+ * Detects pointer strictly at the actual top-center edge (ceiling height 0-4px, width +-100px).
+ * When the pointer transitions from outside into the ceiling zone while hidden, it reveals the pill.
  * Once visible, it tracks whether the pointer remains over the active island surface.
  */
 let mockCursorPoint: { x: number; y: number } | null = null
@@ -451,6 +475,13 @@ export function startActivationMonitor(): void {
   if (activationTimer) clearInterval(activationTimer)
 
   updateCachedDisplayMetrics()
+
+  // Initialize wasInActivationZone so cursor already at ceiling doesn't immediately fire on boot
+  const initialPt = mockCursorPoint || screen.getCursorScreenPoint()
+  wasInActivationZone =
+    initialPt.y >= cachedPrimaryBounds.y &&
+    initialPt.y <= cachedPrimaryBounds.y + 4 &&
+    Math.abs(initialPt.x - cachedCenterX) <= 100
 
   activationTimer = setInterval(() => {
     if (!mainWindow || mainWindow.isDestroyed()) return
@@ -475,38 +506,26 @@ export function startActivationMonitor(): void {
       return
     }
 
-    const { x: workX, y: workY } = cachedPrimaryWorkArea
+    const bounds = cachedPrimaryBounds
     const centerX = cachedCenterX
     const pt = mockCursorPoint || screen.getCursorScreenPoint()
 
-    // 1. Top-edge activation zone:
-    // Screen top ceiling within 16px and centered horizontally (360px wide zone)
+    // 1. Strict Top-Edge Activation Zone:
+    // Physical top ceiling of primary display: pt.y >= bounds.y && pt.y <= bounds.y + 4 (4px depth)
+    // Centered horizontally: Math.abs(pt.x - centerX) <= 100 (200px wide slot)
     const inTopEdgeActivationZone =
-      pt.y <= workY + 16 &&
-      pt.y >= workY - 10 &&
-      Math.abs(pt.x - centerX) <= 180
+      pt.y >= bounds.y &&
+      pt.y <= bounds.y + 4 &&
+      Math.abs(pt.x - centerX) <= 100
 
-    // 2. Active surface hit-testing:
-    const surfaceWidth =
-      currentMode === 'expanded' ? 1040 : WINDOW_CONFIG.pill.width
-    const surfaceHeight =
-      currentMode === 'expanded' ? 640 : WINDOW_CONFIG.pill.height
-    const surfaceLeft = centerX - surfaceWidth / 2
-    const surfaceRight = centerX + surfaceWidth / 2
-    const surfaceTop = workY
-    const surfaceBottom = workY + surfaceHeight
+    const isEdgeTriggeredActivation = inTopEdgeActivationZone && !wasInActivationZone
+    wasInActivationZone = inTopEdgeActivationZone
 
-    const inSurface =
-      pt.x >= surfaceLeft - 20 &&
-      pt.x <= surfaceRight + 20 &&
-      pt.y >= surfaceTop - 10 &&
-      pt.y <= surfaceBottom + 14
-
-    const isHovering = inTopEdgeActivationZone || inSurface
-
+    // While HIDDEN: ONLY the genuine top-edge activation transition can reveal the island!
+    // NEVER evaluate inSurface when hidden to prevent false activation near browser tabs or toolbars.
     if (currentMode === 'hidden' || !mainWindow.isVisible()) {
-      if (isHovering) {
-        console.log(`[is-delulu:hover] Pointer touched top-center edge at (${pt.x}, ${pt.y}). Revealing pill!`)
+      if (isEdgeTriggeredActivation) {
+        console.log(`[is-delulu:hover] Genuine top-edge transition at (${pt.x}, ${pt.y}). Revealing pill!`)
         currentMode = 'collapsed'
         enforceCenteredPosition('collapsed')
         if (!mainWindow.isVisible()) {
@@ -518,15 +537,45 @@ export function startActivationMonitor(): void {
         mainWindow.webContents.send('island:hover-state', true)
         isHoverInWindowOrZone = true
       }
+      return
+    }
+
+    // 2. Active surface hit-testing (strictly when VISIBLE):
+    const winBounds = mainWindow.getBounds()
+    let surfaceLeft: number
+    let surfaceRight: number
+    let surfaceTop: number
+    let surfaceBottom: number
+
+    if (liveSurfaceRect && liveSurfaceRect.width > 0 && liveSurfaceRect.height > 0) {
+      surfaceLeft = winBounds.x + liveSurfaceRect.x
+      surfaceRight = surfaceLeft + liveSurfaceRect.width
+      surfaceTop = winBounds.y + liveSurfaceRect.y
+      surfaceBottom = surfaceTop + liveSurfaceRect.height
     } else {
-      if (isHovering !== isHoverInWindowOrZone) {
-        isHoverInWindowOrZone = isHovering
-        mainWindow.webContents.send('island:hover-state', isHovering)
-        if (isHovering) {
-          mainWindow.setIgnoreMouseEvents(false)
-        } else {
-          mainWindow.setIgnoreMouseEvents(true, { forward: true })
-        }
+      const surfaceWidth = currentMode === 'expanded' ? 640 : WINDOW_CONFIG.pill.width
+      const surfaceHeight = currentMode === 'expanded' ? 390 : WINDOW_CONFIG.pill.height
+      surfaceLeft = centerX - surfaceWidth / 2
+      surfaceRight = centerX + surfaceWidth / 2
+      surfaceTop = winBounds.y
+      surfaceBottom = winBounds.y + surfaceHeight
+    }
+
+    const inSurface =
+      pt.x >= surfaceLeft - 14 &&
+      pt.x <= surfaceRight + 14 &&
+      pt.y >= surfaceTop - 6 &&
+      pt.y <= surfaceBottom + 12
+
+    const isHovering = inTopEdgeActivationZone || inSurface
+
+    if (isHovering !== isHoverInWindowOrZone) {
+      isHoverInWindowOrZone = isHovering
+      mainWindow.webContents.send('island:hover-state', isHovering)
+      if (isHovering) {
+        mainWindow.setIgnoreMouseEvents(false)
+      } else {
+        mainWindow.setIgnoreMouseEvents(true, { forward: true })
       }
     }
   }, 60)
