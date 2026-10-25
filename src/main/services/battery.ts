@@ -27,6 +27,40 @@ function initFastBatteryState(): void {
       lastKnownState.isCharging = !onBattery
     }
   } catch {}
+
+  // Fast asynchronous initial battery percentage probe so early getBatteryState() callers
+  // get the accurate percentage immediately without waiting for the full Win32 daemon loop
+  try {
+    const proc = spawn(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        '$cim = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue; if ($cim) { [math]::Round(($cim | Measure-Object -Property EstimatedChargeRemaining -Average).Average) }'
+      ],
+      { windowsHide: true }
+    )
+
+    let out = ''
+    proc.stdout?.on('data', (d) => {
+      out += d.toString()
+    })
+    proc.on('close', (code) => {
+      if (code === 0) {
+        const val = parseInt(out.trim(), 10)
+        if (!isNaN(val) && val >= 0 && val <= 100) {
+          if (lastKnownState.percent === null) {
+            lastKnownState.percent = val
+            console.log(`[is-delulu:battery] Fast initial battery reading: ${val}%`)
+            if (onChangeCallback) {
+              onChangeCallback({ ...lastKnownState })
+            }
+          }
+        }
+      }
+    })
+  } catch {}
 }
 
 initFastBatteryState()
@@ -48,6 +82,17 @@ function resolveDaemonPath(): string | null {
 
 function processBatteryUpdate(current: BatteryState): void {
   const prev = lastKnownState
+
+  // Retain last known valid percentage if incoming reading is null or invalid
+  if (current.percent === null && prev.percent !== null) {
+    current.percent = prev.percent
+  }
+
+  // Validate range (0 to 100)
+  if (current.percent !== null && (current.percent < 0 || current.percent > 100 || !Number.isFinite(current.percent))) {
+    current.percent = prev.percent
+  }
+
   lastKnownState = current
 
   const chargingChanged = prev.isCharging !== current.isCharging

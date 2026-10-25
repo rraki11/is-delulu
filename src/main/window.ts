@@ -314,9 +314,15 @@ export function setIslandWindowMode(mode: IslandMode): void {
 
   enforceCenteredPosition(mode)
 
-  if (!mainWindow.isVisible()) {
+  if (mode === 'expanded') {
+    mainWindow.setIgnoreMouseEvents(false)
+  } else if (!mainWindow.isVisible()) {
     mainWindow.showInactive()
-    mainWindow.setIgnoreMouseEvents(true, { forward: true })
+    if (isHoverInWindowOrZone) {
+      mainWindow.setIgnoreMouseEvents(false)
+    } else {
+      mainWindow.setIgnoreMouseEvents(true, { forward: true })
+    }
   }
 }
 
@@ -387,9 +393,15 @@ export function showIslandWindow(targetMode: IslandMode = 'collapsed'): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
   currentMode = targetMode
   enforceCenteredPosition(targetMode)
-  if (!mainWindow.isVisible()) {
+  if (targetMode === 'expanded') {
+    mainWindow.setIgnoreMouseEvents(false)
+  } else if (!mainWindow.isVisible()) {
     mainWindow.showInactive()
-    mainWindow.setIgnoreMouseEvents(true, { forward: true })
+    if (isHoverInWindowOrZone) {
+      mainWindow.setIgnoreMouseEvents(false)
+    } else {
+      mainWindow.setIgnoreMouseEvents(true, { forward: true })
+    }
   }
   mainWindow.webContents.send('island:mode-changed', targetMode)
   mainWindow.webContents.send('island:reveal')
@@ -425,6 +437,12 @@ export function hideIslandWindow(): void {
  * When the pointer reaches the actual top edge near center while hidden, it reveals the pill.
  * Once visible, it tracks whether the pointer remains over the active island surface.
  */
+let mockCursorPoint: { x: number; y: number } | null = null
+
+export function setMockCursorPoint(pt: { x: number; y: number } | null): void {
+  mockCursorPoint = pt
+}
+
 export function startActivationMonitor(): void {
   if (activationTimer) clearInterval(activationTimer)
 
@@ -455,55 +473,57 @@ export function startActivationMonitor(): void {
 
     const { x: workX, y: workY } = cachedPrimaryWorkArea
     const centerX = cachedCenterX
-    const pt = screen.getCursorScreenPoint()
+    const pt = mockCursorPoint || screen.getCursorScreenPoint()
 
-    // 1. Narrow top-edge activation zone:
-    // Physical monitor top ceiling: pt.y >= workY && pt.y <= workY + 2 (only top 2-3 pixels)
-    // Horizontally centered matching the collapsed pill width (e.g. 190px -> +/- 95px)
-    // This strictly prevents triggering during normal mouse movement over browser tabs.
+    // 1. Top-edge activation zone:
+    // Screen top ceiling within 16px and centered horizontally (360px wide zone)
     const inTopEdgeActivationZone =
-      pt.y >= workY &&
-      pt.y <= workY + 2 &&
-      Math.abs(pt.x - centerX) <= Math.ceil(WINDOW_CONFIG.pill.width / 2)
+      pt.y <= workY + 16 &&
+      pt.y >= workY - 10 &&
+      Math.abs(pt.x - centerX) <= 180
 
-    if (inTopEdgeActivationZone) {
-      if (!mainWindow.isVisible() || currentMode === 'hidden') {
+    // 2. Active surface hit-testing:
+    const surfaceWidth =
+      currentMode === 'expanded' ? WINDOW_CONFIG.panel.width : WINDOW_CONFIG.pill.width
+    const surfaceHeight =
+      currentMode === 'expanded' ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height
+    const surfaceLeft = centerX - surfaceWidth / 2
+    const surfaceRight = centerX + surfaceWidth / 2
+    const surfaceTop = workY
+    const surfaceBottom = workY + surfaceHeight
+
+    const inSurface =
+      pt.x >= surfaceLeft - 20 &&
+      pt.x <= surfaceRight + 20 &&
+      pt.y >= surfaceTop - 10 &&
+      pt.y <= surfaceBottom + 14
+
+    const isHovering = inTopEdgeActivationZone || inSurface
+
+    if (currentMode === 'hidden' || !mainWindow.isVisible()) {
+      if (isHovering) {
         console.log(`[is-delulu:hover] Pointer touched top-center edge at (${pt.x}, ${pt.y}). Revealing pill!`)
         currentMode = 'collapsed'
         enforceCenteredPosition('collapsed')
-        mainWindow.showInactive()
-        mainWindow.setIgnoreMouseEvents(true, { forward: true })
+        if (!mainWindow.isVisible()) {
+          mainWindow.showInactive()
+        }
+        mainWindow.setIgnoreMouseEvents(false)
         mainWindow.webContents.send('island:mode-changed', 'collapsed')
         mainWindow.webContents.send('island:reveal')
         mainWindow.webContents.send('island:hover-state', true)
         isHoverInWindowOrZone = true
       }
-      return
-    }
-
-    // 2. Active surface hit-testing when window is visible
-    if (mainWindow.isVisible() && currentMode !== 'hidden') {
-      const surfaceWidth =
-        currentMode === 'expanded' ? WINDOW_CONFIG.panel.width : WINDOW_CONFIG.pill.width
-      const surfaceHeight =
-        currentMode === 'expanded' ? WINDOW_CONFIG.panel.height : WINDOW_CONFIG.pill.height
-      const surfaceLeft = centerX - surfaceWidth / 2
-      const surfaceRight = centerX + surfaceWidth / 2
-      const surfaceTop = workY
-      const surfaceBottom = workY + surfaceHeight
-
-      const inSurface =
-        pt.x >= surfaceLeft &&
-        pt.x <= surfaceRight &&
-        pt.y >= surfaceTop &&
-        pt.y <= surfaceBottom
-
-      if (inSurface !== isHoverInWindowOrZone) {
-        isHoverInWindowOrZone = inSurface
-        mainWindow.webContents.send('island:hover-state', inSurface)
-      }
     } else {
-      isHoverInWindowOrZone = false
+      if (isHovering !== isHoverInWindowOrZone) {
+        isHoverInWindowOrZone = isHovering
+        mainWindow.webContents.send('island:hover-state', isHovering)
+        if (isHovering) {
+          mainWindow.setIgnoreMouseEvents(false)
+        } else {
+          mainWindow.setIgnoreMouseEvents(true, { forward: true })
+        }
+      }
     }
   }, 60)
 }

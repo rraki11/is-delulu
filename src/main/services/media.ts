@@ -18,6 +18,7 @@ const audioSessionService = new AudioSessionService()
 let daemonProc: ChildProcess | null = null
 let mediaChangeListeners: ((state: MediaState) => void)[] = []
 let isStarting = false
+let consecutiveFailures = 0
 
 let currentMedia: MediaState = {
   hasSession: false,
@@ -88,16 +89,24 @@ export function startMediaMonitor(): void {
       'powershell.exe',
       ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
       {
-        stdio: ['pipe', 'pipe', 'ignore'],
+        stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true
       }
     )
 
     isStarting = false
 
+    daemonProc.stderr?.on('data', (chunk: Buffer) => {
+      const errStr = chunk.toString('utf8').trim()
+      if (errStr) {
+        console.error('[is-delulu:media] daemon stderr:', errStr)
+      }
+    })
+
     let lineBuffer = ''
 
     daemonProc.stdout?.on('data', (chunk: Buffer) => {
+      consecutiveFailures = 0
       lineBuffer += chunk.toString('utf8')
       const lines = lineBuffer.split('\n')
       lineBuffer = lines.pop() || ''
@@ -212,9 +221,19 @@ export function startMediaMonitor(): void {
     daemonProc.on('exit', (code) => {
       console.log(`[is-delulu:media] GSMTC daemon exited with code ${code}`)
       daemonProc = null
+      if (code === 0) {
+        consecutiveFailures = 0
+        return
+      }
+      consecutiveFailures++
+      if (consecutiveFailures > 5) {
+        console.warn('[is-delulu:media] GSMTC daemon failed repeatedly, pausing restarts.')
+        return
+      }
+      const delay = Math.min(30000, 2000 * Math.pow(1.5, consecutiveFailures - 1))
       setTimeout(() => {
         startMediaMonitor()
-      }, 2000)
+      }, delay)
     })
 
     daemonProc.on('error', (err) => {

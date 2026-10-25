@@ -88,6 +88,7 @@ export const App: React.FC = () => {
     dismissWelcome,
     dismissCharging,
     dismissNotification,
+    enqueueNotification,
     clearTimer
   } = useIslandStateMachine({
     initialMode: mode,
@@ -498,13 +499,20 @@ export const App: React.FC = () => {
     const unsubStartWelcome = window.isDelulu.onStartWelcome
       ? window.isDelulu.onStartWelcome(() => {
           console.log(`[APP ${Date.now()}] [is-delulu:renderer] onStartWelcome received from main process. welcomePhase=${welcomePhaseRef.current}`)
-          hasShownWelcomeRef.current = false
-          triggerWelcome(true)
+          if (welcomePhaseRef.current !== 'active') {
+            hasShownWelcomeRef.current = false
+            triggerWelcome(true)
+          }
         })
       : () => {}
 
-    // Load initial battery state without startup delay
-    window.isDelulu.getBatteryState().then((initial) => {
+    // Load initial battery and welcome state together to prevent startup race conditions
+    Promise.all([
+      window.isDelulu && window.isDelulu.checkWelcome
+        ? window.isDelulu.checkWelcome()
+        : Promise.resolve({ shouldWelcome: false }),
+      window.isDelulu.getBatteryState()
+    ]).then(([{ shouldWelcome }, initial]) => {
       setBatteryState(initial)
       setMachineBatteryState(initial)
       const isConnected = initial.isOnAC === true || initial.isCharging === true
@@ -513,44 +521,37 @@ export const App: React.FC = () => {
       if (initial.isEnergySaver !== null && initial.isEnergySaver !== undefined) {
         prevEnergySaverRef.current = initial.isEnergySaver === true
       }
-      if (isConnected) {
-        console.log(
-          `[APP ${Date.now()}] [is-delulu:renderer] Startup with charger connected: queuing startup charging notification.`
-        )
-        triggerCharging(initial)
-      } else if (initial.percent !== null && initial.percent <= 30) {
-        // App launches with <= 30% on battery: this is an eligible low-battery notification
-        // Enqueue it to run after welcome greeting completes!
-        wasLowBatteryTriggeredRef.current = true
-        console.log(
-          `[APP ${Date.now()}] [is-delulu:renderer] Startup with low battery: enqueuing eligible low-battery notification.`
-        )
-        triggerLowBattery(initial)
+
+      console.log(
+        `[APP ${Date.now()}] [is-delulu:renderer] Startup baseline: shouldWelcome=${shouldWelcome}, isConnected=${isConnected}, pct=${initial.percent}%`
+      )
+
+      if (shouldWelcome) {
+        if (isConnected) {
+          console.log(
+            `[APP ${Date.now()}] [is-delulu:renderer] Startup with charger connected: queuing startup charging notification to play after welcome greeting.`
+          )
+          enqueueNotification({ type: 'charging', state: initial }, 'startup_charging')
+        } else if (initial.percent !== null && initial.percent <= 30) {
+          wasLowBatteryTriggeredRef.current = true
+          console.log(
+            `[APP ${Date.now()}] [is-delulu:renderer] Startup with low battery: queuing low-battery notification.`
+          )
+          enqueueNotification({ type: 'low_battery', target: initial }, 'startup_low_battery')
+        }
+
+        if (welcomePhaseRef.current !== 'active') {
+          triggerWelcome(true)
+        }
+      } else {
+        hasShownWelcomeRef.current = true
+        if (isConnected) {
+          triggerCharging(initial, false)
+        }
       }
+
       isStartupRef.current = false
     })
-
-    // Authoritative welcome sequence initialization
-    if (window.isDelulu && window.isDelulu.checkWelcome) {
-      window.isDelulu.checkWelcome().then(({ shouldWelcome }) => {
-        console.log(`[APP ${Date.now()}] [is-delulu:renderer] checkWelcome response: shouldWelcome=${shouldWelcome}, welcomePhase=${welcomePhaseRef.current}`)
-        if (shouldWelcome) {
-          if (welcomePhaseRef.current !== 'active') {
-            console.log(
-              `[APP ${Date.now()}] [is-delulu:renderer] Triggering welcome greeting sequence for fresh application startup.`
-            )
-            triggerWelcome(true)
-          }
-        } else {
-          hasShownWelcomeRef.current = true
-          if (welcomePhaseRef.current === 'active') {
-            completeWelcome()
-          }
-        }
-      })
-    } else if (!window.isDelulu) {
-      triggerWelcome(true)
-    }
 
     // Load initial accent palette and subscribe to updates
     if (window.isDelulu.getAccentPalette) {
@@ -682,31 +683,31 @@ export const App: React.FC = () => {
       }
 
       const isInside =
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom
+        e.clientX >= rect.left - 20 &&
+        e.clientX <= rect.right + 20 &&
+        e.clientY >= -10 &&
+        e.clientY <= rect.bottom + 14
 
       updateMouseHitTest(isInside)
 
       if (isInside) {
         handlePointerEnter()
-      } else {
+      } else if (machineState !== 'NORMAL_REVEALING') {
         handlePointerLeave()
       }
     }
 
     const handleWindowMouseLeave = (): void => {
       updateMouseHitTest(false)
-      if (!isNotificationActiveRef.current) {
+      if (!isNotificationActiveRef.current && !preferences?.isPinned && machineState !== 'NORMAL_REVEALING') {
         handlePointerLeave()
       }
     }
 
     const handleWindowBlur = (): void => {
-      updateMouseHitTest(false)
-      if (!isNotificationActiveRef.current) {
-        handlePointerLeave()
+      // If expanded and user clicked away into another app, collapse back to pill
+      if (currentMode === 'expanded') {
+        collapse()
       }
     }
 

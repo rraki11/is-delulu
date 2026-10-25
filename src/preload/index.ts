@@ -12,7 +12,8 @@ import {
   DebugStatus,
   AccentPalette,
   BatteryState,
-  WallpaperItem
+  WallpaperItem,
+  AnimationMetrics
 } from '../shared/types'
 
 const isDeluluAPI: IsDeluluAPI = {
@@ -326,6 +327,9 @@ const isDeluluAPI: IsDeluluAPI = {
   },
 
   // Diagnostics & Debug
+  simulateCursor: (pt: { x: number; y: number } | null): Promise<boolean> => {
+    return ipcRenderer.invoke('debug:simulate-cursor', pt)
+  },
   toggleForceVisibleDebug: (): Promise<boolean> => {
     return ipcRenderer.invoke('debug:toggle-force-visible')
   },

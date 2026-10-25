@@ -368,7 +368,7 @@ $asTaskGeneric = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Ob
     $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'
 } | Select-Object -First 1
 
-function Await-Op($op, $type) {
+function Wait-Op($op, $type) {
     if ($null -eq $op) { return $null }
     try {
         $task = $asTaskGeneric.MakeGenericMethod($type).Invoke($null, @($op))
@@ -380,7 +380,7 @@ function Await-Op($op, $type) {
 
 $mgr = $null
 try {
-    $mgr = Await-Op ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
+    $mgr = Wait-Op ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
 } catch {}
 
 # 3. Start C# StdinListener for background command reading
@@ -413,7 +413,7 @@ function Get-FriendlyAppName($id) {
 }
 
 # 4. Multi-Session Discovery & State Retrieval
-function Emit-State() {
+function Send-State() {
     try {
         $sources = [System.Collections.Generic.List[hashtable]]::new()
         $sessionList = [System.Collections.Generic.List[hashtable]]::new()
@@ -460,7 +460,7 @@ function Emit-State() {
                     $isPlaying = ($statusStr -eq "Playing")
 
                     $propsOp = $s.TryGetMediaPropertiesAsync()
-                    $props = Await-Op $propsOp ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
+                    $props = Wait-Op $propsOp ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
                     $timeline = $s.GetTimelineProperties()
 
                     # Accurate real-time timeline position
@@ -690,7 +690,7 @@ function Emit-State() {
 }
 
 # Initial emit
-Emit-State
+Send-State
 
 $lastCheck = [DateTime]::UtcNow
 
@@ -774,30 +774,30 @@ while ($true) {
                     if ($action -eq "toggle") {
                         if ($isCurrentlyPlaying) {
                             $op = $targetSession.TryPauseAsync()
-                            $res = Await-Op $op ([System.Boolean])
+                            $res = Wait-Op $op ([System.Boolean])
                             if (-not $res) {
-                                Await-Op ($targetSession.TryTogglePlayPauseAsync()) ([System.Boolean]) | Out-Null
+                                Wait-Op ($targetSession.TryTogglePlayPauseAsync()) ([System.Boolean]) | Out-Null
                             }
                         } else {
                             $op = $targetSession.TryPlayAsync()
-                            $res = Await-Op $op ([System.Boolean])
+                            $res = Wait-Op $op ([System.Boolean])
                             if (-not $res) {
-                                Await-Op ($targetSession.TryTogglePlayPauseAsync()) ([System.Boolean]) | Out-Null
+                                Wait-Op ($targetSession.TryTogglePlayPauseAsync()) ([System.Boolean]) | Out-Null
                             }
                         }
                         $handledCmd = $true
                     } elseif ($action -eq "pause") {
                         $op = $targetSession.TryPauseAsync()
-                        $res = Await-Op $op ([System.Boolean])
+                        $res = Wait-Op $op ([System.Boolean])
                         if (-not $res) {
-                            Await-Op ($targetSession.TryTogglePlayPauseAsync()) ([System.Boolean]) | Out-Null
+                            Wait-Op ($targetSession.TryTogglePlayPauseAsync()) ([System.Boolean]) | Out-Null
                         }
                         $handledCmd = $true
                     } elseif ($action -eq "play") {
                         $op = $targetSession.TryPlayAsync()
-                        $res = Await-Op $op ([System.Boolean])
+                        $res = Wait-Op $op ([System.Boolean])
                         if (-not $res) {
-                            Await-Op ($targetSession.TryTogglePlayPauseAsync()) ([System.Boolean]) | Out-Null
+                            Wait-Op ($targetSession.TryTogglePlayPauseAsync()) ([System.Boolean]) | Out-Null
                         }
                         $handledCmd = $true
                     } elseif ($action -eq "next" -or $action -eq "forward") {
@@ -805,7 +805,7 @@ while ($true) {
                         if ($controls -and $controls.IsNextEnabled) {
                             try {
                                 $op = $targetSession.TrySkipNextAsync()
-                                $skipped = [bool](Await-Op $op ([System.Boolean]))
+                                $skipped = [bool](Wait-Op $op ([System.Boolean]))
                             } catch {}
                         }
                         if (-not $skipped) {
@@ -814,7 +814,7 @@ while ($true) {
                             $ticks = [long]($targetPos * 10000000)
                             try {
                                 $op = $targetSession.TryChangePlaybackPositionAsync($ticks)
-                                Await-Op $op ([System.Boolean]) | Out-Null
+                                Wait-Op $op ([System.Boolean]) | Out-Null
                             } catch {}
                         }
                         $handledCmd = $true
@@ -823,7 +823,7 @@ while ($true) {
                         if ($controls -and $controls.IsPreviousEnabled) {
                             try {
                                 $op = $targetSession.TrySkipPreviousAsync()
-                                $skipped = [bool](Await-Op $op ([System.Boolean]))
+                                $skipped = [bool](Wait-Op $op ([System.Boolean]))
                             } catch {}
                         }
                         if (-not $skipped) {
@@ -831,7 +831,7 @@ while ($true) {
                             $ticks = [long]($targetPos * 10000000)
                             try {
                                 $op = $targetSession.TryChangePlaybackPositionAsync($ticks)
-                                Await-Op $op ([System.Boolean]) | Out-Null
+                                Wait-Op $op ([System.Boolean]) | Out-Null
                             } catch {}
                         }
                         $handledCmd = $true
@@ -841,7 +841,7 @@ while ($true) {
                         $ticks = [long]($targetPos * 10000000)
                         try {
                             $op = $targetSession.TryChangePlaybackPositionAsync($ticks)
-                            Await-Op $op ([System.Boolean]) | Out-Null
+                            Wait-Op $op ([System.Boolean]) | Out-Null
                         } catch {}
                         $handledCmd = $true
                     }
@@ -852,11 +852,11 @@ while ($true) {
 
     if ($handledCmd) {
         [System.Threading.Thread]::Sleep(80)
-        Emit-State
+        Send-State
         $lastCheck = [DateTime]::UtcNow
         $needsImmediateEmit = $false
     } elseif ($needsImmediateEmit) {
-        Emit-State
+        Send-State
         $lastCheck = [DateTime]::UtcNow
         $needsImmediateEmit = $false
     }
@@ -865,7 +865,7 @@ while ($true) {
     $interval = 600
     if (([DateTime]::UtcNow - $lastCheck).TotalMilliseconds -ge $interval) {
         $lastCheck = [DateTime]::UtcNow
-        Emit-State
+        Send-State
     }
 
     [System.Threading.Thread]::Sleep(40)

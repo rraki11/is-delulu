@@ -221,6 +221,41 @@ export function useIslandStateMachine({
   const [energySaverThreshold, setEnergySaverThreshold] = useState<number | null>(null)
 
   const [batteryState, setBatteryState] = useState<BatteryState | null>(null)
+  const latestBatteryStateRef = useRef<BatteryState | null>(null)
+
+  const updateBatteryState = useCallback((incoming: BatteryState | null | undefined) => {
+    if (!incoming) return
+    setBatteryState((prev) => {
+      const merged: BatteryState = {
+        percent: incoming.percent ?? prev?.percent ?? null,
+        isCharging: incoming.isCharging ?? prev?.isCharging ?? null,
+        isFullyCharged: incoming.isFullyCharged ?? prev?.isFullyCharged ?? null,
+        isOnAC: incoming.isOnAC ?? prev?.isOnAC ?? null,
+        isEnergySaver: incoming.isEnergySaver ?? prev?.isEnergySaver ?? null,
+        energySaverThreshold: incoming.energySaverThreshold ?? prev?.energySaverThreshold ?? null,
+        minutesRemaining: incoming.minutesRemaining ?? prev?.minutesRemaining ?? null
+      }
+      latestBatteryStateRef.current = merged
+      return merged
+    })
+
+    // Synchronize pending queue items with fresh battery metrics
+    for (const item of notificationQueueRef.current) {
+      if (item.type === 'charging') {
+        item.state = {
+          ...item.state,
+          ...incoming,
+          percent: incoming.percent ?? item.state.percent ?? null
+        }
+      } else if (item.type === 'low_battery' && typeof item.target === 'object' && item.target !== null) {
+        item.target = {
+          ...item.target,
+          ...incoming,
+          percent: incoming.percent ?? item.target.percent ?? null
+        }
+      }
+    }
+  }, [])
 
   const onModeChangeRef = useRef(onModeChange)
   onModeChangeRef.current = onModeChange
@@ -271,12 +306,12 @@ export function useIslandStateMachine({
     []
   )
 
-  // Step 2 of auto-hide: Keep the collapsed pill visible before hiding (default: 1,000ms, or custom duration)
+  // Step 2 of auto-hide: Keep the collapsed pill visible before hiding (default: 1,800ms, or custom duration)
   const startMinVisibilityTimer = useCallback(
     (customDuration?: number) => {
       clearHoverTimers()
 
-      const duration = typeof customDuration === 'number' ? customDuration : 1000
+      const duration = typeof customDuration === 'number' ? customDuration : 1800
 
       hoverTimerRef.current = setTimeout(() => {
         if (
@@ -291,7 +326,7 @@ export function useIslandStateMachine({
           document.activeElement.blur()
         }
 
-        transitionTo('HIDDEN')
+        transitionTo(isPinnedRef.current ? 'COLLAPSED' : 'HIDDEN')
         if (window.isDelulu) {
           window.isDelulu.setIslandMode('hidden')
         }
@@ -313,31 +348,36 @@ export function useIslandStateMachine({
         return
 
       transitionTo('COLLAPSED')
-      startMinVisibilityTimer()
+      startMinVisibilityTimer(1800)
     }, 500)
   }, [clearHoverTimers, transitionTo, startMinVisibilityTimer])
 
   // Top-edge hover reveal
   const reveal = useCallback(() => {
-    if (isPinnedRef.current || stateRef.current === 'PINNED') return
+    if (stateRef.current === 'PINNED') return
     if (isSpecialLifecycleActive(stateRef.current, isClockHandoffActiveRef.current)) return
 
     clearHoverTimers()
 
-    if (stateRef.current === 'HIDDEN') {
+    if (isPinnedRef.current) {
+      transitionTo('COLLAPSED')
+      return
+    }
+
+    if (stateRef.current === 'HIDDEN' || stateRef.current === 'NORMAL_REVEALING') {
       transitionTo('NORMAL_REVEALING')
       revealTimerRef.current = setTimeout(() => {
         if (stateRef.current === 'NORMAL_REVEALING') {
           transitionTo('COLLAPSED')
-          if (!isHoveredRef.current) {
-            startMinVisibilityTimer()
+          if (!isHoveredRef.current && !isPinnedRef.current) {
+            startMinVisibilityTimer(2000)
           }
         }
       }, 180)
-    } else if (stateRef.current === 'NORMAL_REVEALING') {
-      transitionTo('COLLAPSED')
-      if (!isHoveredRef.current) {
-        startMinVisibilityTimer()
+    } else if (stateRef.current === 'COLLAPSED') {
+      clearHoverTimers()
+      if (!isHoveredRef.current && !isPinnedRef.current) {
+        startMinVisibilityTimer(2000)
       }
     }
   }, [clearHoverTimers, transitionTo, startMinVisibilityTimer])
@@ -348,7 +388,7 @@ export function useIslandStateMachine({
     isHoveredRef.current = true
     clearHoverTimers()
 
-    if (isPinnedRef.current || stateRef.current === 'PINNED') return
+    if (stateRef.current === 'PINNED') return
 
     if (stateRef.current === 'HIDDEN') {
       reveal()
@@ -364,8 +404,8 @@ export function useIslandStateMachine({
 
     if (stateRef.current === 'EXPANDED') {
       startGraceCollapseTimer()
-    } else if (stateRef.current === 'COLLAPSED' || stateRef.current === 'NORMAL_REVEALING') {
-      startMinVisibilityTimer()
+    } else if (stateRef.current === 'COLLAPSED') {
+      startMinVisibilityTimer(1800)
     }
   }, [startGraceCollapseTimer, startMinVisibilityTimer])
 
@@ -400,23 +440,33 @@ export function useIslandStateMachine({
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
-    transitionTo('HIDDEN')
+    transitionTo(isPinnedRef.current ? 'COLLAPSED' : 'HIDDEN')
   }, [clearHoverTimers, clearNotificationTimers, transitionTo])
 
   // ── Centralized Notification Coordinator ────────────────────────────────────
   const enqueueNotification = useCallback((item: QueuedNotificationItem, reason: string) => {
-    const priority = getNotificationPriority(item.type)
-    const existingIndex = notificationQueueRef.current.findIndex((q) => q.type === item.type)
+    const itemToQueue = { ...item }
+    if (itemToQueue.type === 'charging' && itemToQueue.state) {
+      if (itemToQueue.state.percent === null && latestBatteryStateRef.current?.percent != null) {
+        itemToQueue.state = {
+          ...itemToQueue.state,
+          percent: latestBatteryStateRef.current.percent
+        }
+      }
+    }
+
+    const priority = getNotificationPriority(itemToQueue.type)
+    const existingIndex = notificationQueueRef.current.findIndex((q) => q.type === itemToQueue.type)
 
     if (existingIndex >= 0) {
-      notificationQueueRef.current[existingIndex] = item
+      notificationQueueRef.current[existingIndex] = itemToQueue
       console.log(
-        `[is-delulu:coordinator] Updated existing queued ${item.type} notification (priority ${priority}, reason: ${reason}). Queue size: ${notificationQueueRef.current.length}`
+        `[is-delulu:coordinator] Updated existing queued ${itemToQueue.type} notification (priority ${priority}, reason: ${reason}). Queue size: ${notificationQueueRef.current.length}`
       )
     } else {
-      notificationQueueRef.current.push(item)
+      notificationQueueRef.current.push(itemToQueue)
       console.log(
-        `[is-delulu:coordinator] Added ${item.type} notification to queue (priority ${priority}, reason: ${reason}). Queue size: ${notificationQueueRef.current.length}`
+        `[is-delulu:coordinator] Added ${itemToQueue.type} notification to queue (priority ${priority}, reason: ${reason}). Queue size: ${notificationQueueRef.current.length}`
       )
     }
   }, [])
@@ -452,7 +502,11 @@ export function useIslandStateMachine({
     // Micro-gap between notifications to prevent instantaneous snapping
     setTimeout(() => {
       if (next.type === 'charging') {
-        triggerChargingRef.current(next.state, isVisibleNow)
+        const freshestState: BatteryState = {
+          ...next.state,
+          percent: next.state.percent ?? latestBatteryStateRef.current?.percent ?? null
+        }
+        triggerChargingRef.current(freshestState, isVisibleNow)
       } else if (next.type === 'energy_saver') {
         triggerEnergySaverRef.current(next.mode, next.threshold)
       } else if (next.type === 'low_battery') {
@@ -464,15 +518,23 @@ export function useIslandStateMachine({
   // ── 1. Priority 3: Authoritative Charging Notification Lifecycle ────────────
   const triggerCharging = useCallback(
     (stateData: BatteryState, directHandoff = false) => {
-      setBatteryState(stateData)
+      const mergedState: BatteryState = {
+        ...stateData,
+        percent: stateData.percent ?? latestBatteryStateRef.current?.percent ?? null
+      }
+      latestBatteryStateRef.current = mergedState
+      setBatteryState(mergedState)
 
       // If welcome animation is currently active or clock handoff is dwelling, defer and queue!
       if (!directHandoff && (stateRef.current === 'WELCOME_ACTIVE' || isClockHandoffActiveRef.current)) {
         console.log(
           '[is-delulu:coordinator] Charging notification deferred: Welcome sequence / clock handoff is active. Enqueued at Priority 3.'
         )
-        if (!notificationQueueRef.current.some((item) => item.type === 'charging')) {
-          enqueueNotification({ type: 'charging', state: stateData }, 'welcome_active')
+        const existingCharging = notificationQueueRef.current.find((item) => item.type === 'charging')
+        if (existingCharging) {
+          existingCharging.state = mergedState
+        } else {
+          enqueueNotification({ type: 'charging', state: mergedState }, 'welcome_active')
         }
         return
       }
@@ -480,14 +542,17 @@ export function useIslandStateMachine({
       // If another notification is active:
       if (isNotificationActiveState(stateRef.current)) {
         if (isChargingState(stateRef.current)) {
-          // Already running charging sequence, do not duplicate
+          // Already running charging sequence, do not duplicate or restart!
           return
         }
         console.log(
           `[is-delulu:coordinator] Charging notification deferred: another notification is active (${stateRef.current}). Enqueued at Priority 3.`
         )
-        if (!notificationQueueRef.current.some((item) => item.type === 'charging')) {
-          enqueueNotification({ type: 'charging', state: stateData }, 'notification_active')
+        const existingCharging = notificationQueueRef.current.find((item) => item.type === 'charging')
+        if (existingCharging) {
+          existingCharging.state = mergedState
+        } else {
+          enqueueNotification({ type: 'charging', state: mergedState }, 'notification_active')
         }
         return
       }
@@ -530,7 +595,7 @@ export function useIslandStateMachine({
                 if (notificationSessionIdRef.current !== sid) return
                 isDirectHandoffRef.current = false
                 setIsDirectHandoff(false)
-                transitionTo('HIDDEN')
+                transitionTo(isPinnedRef.current ? 'COLLAPSED' : 'HIDDEN')
                 // Process next queued notification in priority order (notifies ended when queue empty)
                 processNextQueuedNotification()
               }, 320)
@@ -565,7 +630,7 @@ export function useIslandStateMachine({
                   if (notificationSessionIdRef.current !== sid) return
                   isDirectHandoffRef.current = false
                   setIsDirectHandoff(false)
-                  transitionTo('HIDDEN')
+                  transitionTo(isPinnedRef.current ? 'COLLAPSED' : 'HIDDEN')
                   // Process next queued notification in priority order (notifies ended when queue empty)
                   processNextQueuedNotification()
                 }, 320)
@@ -643,7 +708,7 @@ export function useIslandStateMachine({
           // Exit slide up into top bezel (320ms) -> HIDDEN
           notificationTimerRef.current = setTimeout(() => {
             if (notificationSessionIdRef.current !== sid) return
-            transitionTo('HIDDEN')
+            transitionTo(isPinnedRef.current ? 'COLLAPSED' : 'HIDDEN')
             // Process next queued notification in priority order
             processNextQueuedNotification()
           }, 320)
@@ -712,7 +777,7 @@ export function useIslandStateMachine({
           // Exit slide up into top bezel (320ms) -> HIDDEN
           notificationTimerRef.current = setTimeout(() => {
             if (notificationSessionIdRef.current !== sid) return
-            transitionTo('HIDDEN')
+            transitionTo(isPinnedRef.current ? 'COLLAPSED' : 'HIDDEN')
             // Process next queued notification in priority order
             processNextQueuedNotification()
           }, 320)
@@ -735,7 +800,7 @@ export function useIslandStateMachine({
     clearNotificationTimers()
     notificationQueueRef.current = []
     ++notificationSessionIdRef.current
-    transitionTo('HIDDEN')
+    transitionTo(isPinnedRef.current ? 'COLLAPSED' : 'HIDDEN')
     window.isDelulu?.notifyNotificationEnded?.() ??
       window.isDelulu?.notifyChargingEnded?.()
   }, [clearNotificationTimers, transitionTo])
@@ -811,7 +876,11 @@ export function useIslandStateMachine({
       if (next) {
         console.log(`[STATE_MACHINE ${Date.now()}] [is-delulu:coordinator] Executing seamless handoff to: ${next.type}`)
         if (next.type === 'charging') {
-          triggerChargingRef.current(next.state, true)
+          const freshestState: BatteryState = {
+            ...next.state,
+            percent: next.state.percent ?? latestBatteryStateRef.current?.percent ?? null
+          }
+          triggerChargingRef.current(freshestState, true)
         } else if (next.type === 'energy_saver') {
           triggerEnergySaverRef.current(next.mode, next.threshold)
         } else if (next.type === 'low_battery') {
@@ -839,7 +908,7 @@ export function useIslandStateMachine({
       clearTimeout(welcomeTimerRef.current)
       welcomeTimerRef.current = null
     }
-    transitionTo('HIDDEN')
+    transitionTo(isPinnedRef.current ? 'COLLAPSED' : 'HIDDEN')
   }, [transitionTo])
 
   // Sync pinned preference changes
@@ -891,7 +960,7 @@ export function useIslandStateMachine({
     isNotificationActive,
     activeNotification,
     batteryState,
-    setBatteryState,
+    setBatteryState: updateBatteryState,
     isHovered: isHoveredRef.current,
     handlePointerEnter,
     handlePointerLeave,
@@ -907,6 +976,7 @@ export function useIslandStateMachine({
     dismissWelcome,
     dismissCharging,
     dismissNotification,
+    enqueueNotification,
     clearTimer: clearHoverTimers
   }
 }

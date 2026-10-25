@@ -347,6 +347,7 @@ export interface IsDeluluAPI {
   recordAnimationMetrics?: (metrics: AnimationMetrics) => Promise<void>
 
   // Diagnostics & Debug
+  simulateCursor?: (pt: { x: number; y: number } | null) => Promise<boolean>
   toggleForceVisibleDebug: () => Promise<boolean>
   getDebugStatus: () => Promise<DebugStatus>
   onForceVisibleChanged: (callback: (isForced: boolean) => void) => () => void

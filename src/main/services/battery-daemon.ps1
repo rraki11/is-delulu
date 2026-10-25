@@ -163,6 +163,19 @@ function Emit-BatteryStatus([bool]$force = $false) {
         $ac = $status.ACLineStatus -eq 1
         $pct = if ($status.BatteryLifePercent -le 100) { [int]$status.BatteryLifePercent } else { $null }
 
+        # Fallback to WMI/CIM if GetSystemPowerStatus returned unknown (255)
+        if ($pct -eq $null) {
+            try {
+                $cim = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
+                if ($cim) {
+                    $cimPct = ($cim | Measure-Object -Property EstimatedChargeRemaining -Average).Average
+                    if ($cimPct -ne $null -and $cimPct -ge 0 -and $cimPct -le 100) {
+                        $pct = [int][math]::Round($cimPct)
+                    }
+                }
+            } catch {}
+        }
+
         $threshold = Get-EnergySaverThreshold
 
         # Authoritative Windows 11 & Windows 10 Energy Saver detection:

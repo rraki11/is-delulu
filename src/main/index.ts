@@ -16,7 +16,8 @@ import {
   markWelcomeShown,
   resetWelcomeShownForResume,
   showIslandWindowForWelcome,
-  handleRendererReady
+  handleRendererReady,
+  setMockCursorPoint
 } from './window'
 import { setupTray } from './tray'
 import { getSystemStats } from './services/system'
@@ -127,13 +128,12 @@ if (!gotTheLock) {
     // remain completely responsive without CPU or disk contention.
     let sysTimer: NodeJS.Timeout | null = null
 
-    // Stage 1 (150ms after window creation): Real-time battery and wallpaper monitor
-    setTimeout(() => {
-      let previousPowerConnected: boolean | null = null
-      let previousEnergySaver: boolean | null = null
-      let isInitialBatteryCheck = true
+    // Stage 1: Real-time battery and wallpaper monitor (start immediately on window creation)
+    let previousPowerConnected: boolean | null = null
+    let previousEnergySaver: boolean | null = null
+    let isInitialBatteryCheck = true
 
-      startBatteryMonitor((batteryState) => {
+    startBatteryMonitor((batteryState) => {
         if (!mainWindow || mainWindow.isDestroyed()) return
 
         const isConnected = batteryState.isOnAC === true || batteryState.isCharging === true
@@ -215,7 +215,6 @@ if (!gotTheLock) {
           mainWindow.webContents.send('theme:accent-updated', palette)
         }
       })
-    }, 150)
 
     // Stage 2 (1400ms after window creation): GSMTC media daemon, clipboard history, telemetry
     // Deferred until entrance slide settles so child process creation doesn't drop animation frames.
@@ -356,7 +355,11 @@ if (!gotTheLock) {
   // Set click-through for transparent window regions
   ipcMain.handle('window:set-ignore-mouse-events', (_event, ignore: boolean, forward = true) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setIgnoreMouseEvents(Boolean(ignore), { forward: Boolean(forward) })
+      if (ignore) {
+        mainWindow.setIgnoreMouseEvents(true, { forward: Boolean(forward) })
+      } else {
+        mainWindow.setIgnoreMouseEvents(false)
+      }
     }
   })
 
@@ -556,6 +559,11 @@ if (!gotTheLock) {
   // Development diagnostics
   ipcMain.handle('debug:toggle-force-visible', () => {
     return toggleForceVisibleDebug()
+  })
+
+  ipcMain.handle('debug:simulate-cursor', (_event, pt: { x: number; y: number } | null) => {
+    setMockCursorPoint(pt)
+    return true
   })
 
   ipcMain.handle('debug:get-status', () => {

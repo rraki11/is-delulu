@@ -62,16 +62,37 @@ export const ChargingContent: React.FC<ChargingContentProps> = ({
 }) => {
   const progressRef = useRef<HTMLDivElement>(null)
   const isExpanded = phase === 'expanded'
-  const percent = batteryState?.percent ?? 0
+
+  // Validate and normalize battery percentage (0 - 100)
+  const rawPercent = batteryState?.percent
+  let validPercent: number | null = null
+
+  if (typeof rawPercent === 'number' && Number.isFinite(rawPercent)) {
+    if (rawPercent > 0 && rawPercent <= 1) {
+      // Decimal format 0.0 - 1.0 -> 0 - 100
+      validPercent = Math.round(rawPercent * 100)
+    } else if (rawPercent >= 0 && rawPercent <= 100) {
+      validPercent = Math.round(rawPercent)
+    }
+  }
+
+  // Distinguish genuine 0% from null/unreported data:
+  // If validPercent is a number (including genuine 0), show `${validPercent}%`.
+  // If unavailable/null, show '--%' rather than falsely reporting '0%'.
+  const percentText = validPercent !== null ? `${validPercent}%` : '--%'
 
   // Animate progress bar fill smoothly when percent changes
   useEffect(() => {
     if (!progressRef.current) return
-    progressRef.current.style.width = `${Math.max(2, Math.min(100, percent))}%`
-  }, [percent])
+    if (validPercent !== null) {
+      progressRef.current.style.width = `${Math.max(2, Math.min(100, validPercent))}%`
+    } else {
+      progressRef.current.style.width = '0%'
+    }
+  }, [validPercent])
 
   // Clamp head bubble so it stays comfortably within track borders
-  const headBubbleLeft = Math.min(95, Math.max(6, percent))
+  const headBubbleLeft = validPercent !== null ? Math.min(95, Math.max(6, validPercent)) : 6
 
   return (
     <div
@@ -132,7 +153,7 @@ export const ChargingContent: React.FC<ChargingContentProps> = ({
                 letterSpacing: '0'
               }}
             >
-              {percent}%
+              {percentText}
             </span>
           </motion.div>
         )}
@@ -164,7 +185,7 @@ export const ChargingContent: React.FC<ChargingContentProps> = ({
                 ref={progressRef}
                 className="charging-bar-fill"
                 style={{
-                  width: `${Math.max(2, Math.min(100, percent))}%`,
+                  width: `${validPercent !== null ? Math.max(2, Math.min(100, validPercent)) : 0}%`,
                   transition: 'width 1.2s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
               />
@@ -179,7 +200,7 @@ export const ChargingContent: React.FC<ChargingContentProps> = ({
                   className="tabular-nums"
                   style={{ fontSize: '10px', fontWeight: 600 }}
                 >
-                  {percent}%
+                  {percentText}
                 </span>
               </div>
             </div>
